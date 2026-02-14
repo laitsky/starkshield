@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Users can prove who they are without revealing who they are -- private credential verification that is fully on-chain, composable, and trust-minimized.
-**Current focus:** Phase 4 - Smart Contracts & Deployment (COMPLETE -- both plans done)
+**Current focus:** Phase 5 - Proof Engine SDK (COMPLETE -- 1 plan done)
 
 ## Current Position
 
-Phase: 4 of 8 (Smart Contracts & Deployment) -- COMPLETE
-Plan: 2 of 2 in current phase (complete)
-Status: Phase 04 complete, ready for Phase 05 (Proof Engine SDK)
-Last activity: 2026-02-14 -- Plan 04-02 executed (StarkShieldRegistry deployed + validated on Sepolia)
+Phase: 5 of 8 (Proof Engine SDK) -- COMPLETE
+Plan: 1 of 1 in current phase (complete)
+Status: Phase 05 complete, ready for Phase 06
+Last activity: 2026-02-14 -- Plan 05-01 executed (Proof Engine SDK built + validated)
 
-Progress: [██████░░░░] 60%
+Progress: [███████░░░] 70%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
-- Average duration: 47min
-- Total execution time: 4.7 hours
+- Total plans completed: 7
+- Average duration: 41min
+- Total execution time: 4.8 hours
 
 **By Phase:**
 
@@ -31,9 +31,10 @@ Progress: [██████░░░░] 60%
 | 02 | 1/1 | 4min | 4min |
 | 03 | 1/1 | 4min | 4min |
 | 04 | 2/2 | 37min | 19min |
+| 05 | 1/1 | 5min | 5min |
 
 **Recent Trend:**
-- Last 5 plans: 4min, 4min, 25min, 12min
+- Last 5 plans: 4min, 4min, 25min, 12min, 5min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -74,6 +75,10 @@ Recent decisions affecting current work:
 - [04-02]: u256 calldata serialization: low 128 bits first, high 128 bits second
 - [04-02]: verify_and_register gas: ~2.25 STRK (l2_gas 281M, l1_data_gas 768) -- registry adds minimal overhead
 - [04-02]: Both demo issuers (age + membership) have different key pairs -- both registered as trusted
+- [05-01]: vite-plugin-node-polyfills upgraded 0.17.0 -> 0.25.0 (0.17.0 incompatible with vite 6 peer dep)
+- [05-01]: Using { keccak: true } for browser proof generation (matches Phase 4 CLI bb prove --oracle_hash keccak)
+- [05-01]: bb.js excluded from Vite optimizeDeps to prevent WASM loading breakage
+- [05-01]: Signature array mapped via .map(b => b.toString()) for noir_js InputMap string requirement
 
 ### Pending Todos
 
@@ -82,12 +87,12 @@ None yet.
 ### Blockers/Concerns
 
 - [Phase 1 RESOLVED]: Garaga v1.0.1 compatibility confirmed with Noir beta.16 (beta.18 was incompatible, downgraded)
-- [Phase 1]: nargo beta.16 ACIR artifacts with noir_js -- version gap may cause issues (was beta.18 gap, now beta.16)
+- [Phase 1 -> Phase 5]: nargo beta.16 + noir_js beta.16 version match confirmed; SDK TypeScript compiles cleanly
 - [Phase 1 RESOLVED]: scarb 2.15.x incompatible with garaga contracts -- must use scarb 2.14.0
 - [Phase 1 RESOLVED]: @aztec/bb.js Poseidon2 and Schnorr TypeScript APIs confirmed working -- cross-validation tests pass
 
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 04-02-PLAN.md (Phase 04 complete -- all contracts deployed on Sepolia)
-Resume file: .planning/phases/04-smart-contracts-deployment/04-02-SUMMARY.md
+Stopped at: Completed 05-01-PLAN.md (Phase 05 complete -- Proof Engine SDK built)
+Resume file: .planning/phases/05-proof-engine-sdk/05-01-SUMMARY.md
