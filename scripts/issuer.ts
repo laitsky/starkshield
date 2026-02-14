@@ -7,8 +7,10 @@
  * that can be used as witness data for circuit proving.
  *
  * Usage:
- *   npx tsx issuer.ts                   # Generate age verification credential
- *   npx tsx issuer.ts --type membership # Generate membership credential
+ *   npx tsx issuer.ts                    # Generate age verification credential (age=25, valid expiry)
+ *   npx tsx issuer.ts --type membership  # Generate membership credential
+ *   npx tsx issuer.ts --expired          # Generate expired credential (age=25, expired yesterday)
+ *   npx tsx issuer.ts --young            # Generate young credential (age=15, valid expiry)
  */
 
 import { Barretenberg, Fr } from '@aztec/bb.js';
@@ -43,8 +45,15 @@ interface CredentialOutput {
 async function main() {
   const isMembership = process.argv.includes('--type') &&
     process.argv[process.argv.indexOf('--type') + 1] === 'membership';
+  const isExpired = process.argv.includes('--expired');
+  const isYoung = process.argv.includes('--young');
 
-  console.log(`Generating ${isMembership ? 'membership' : 'age verification'} credential...`);
+  const typeLabel = isMembership ? 'membership' : 'age verification';
+  const modifiers = [
+    isExpired ? 'expired' : '',
+    isYoung ? 'young (age=15)' : '',
+  ].filter(Boolean).join(', ');
+  console.log(`Generating ${typeLabel} credential${modifiers ? ` (${modifiers})` : ''}...`);
 
   // Initialize Barretenberg
   const bb = await Barretenberg.new({ threads: 1 });
@@ -68,6 +77,9 @@ async function main() {
     const now = BigInt(Math.floor(Date.now() / 1000));
     const oneYearFromNow = now + 86400n * 365n;
 
+    // --expired: set expires_at to yesterday instead of +1 year
+    const expiresAt = isExpired ? (now - 86400n) : oneYearFromNow;
+
     let credentialType: bigint;
     let attributeKey: bigint;
     let attributeValue: bigint;
@@ -79,7 +91,8 @@ async function main() {
     } else {
       credentialType = CREDENTIAL_TYPE_AGE;
       attributeKey = ATTR_KEY_AGE;
-      attributeValue = 25n; // age = 25
+      // --young: set age to 15 instead of 25
+      attributeValue = isYoung ? 15n : 25n;
     }
 
     // Use the public key x-coordinate as issuer_id (deterministic, on-chain verifiable)
@@ -89,7 +102,7 @@ async function main() {
     const attributeKeyFr = new Fr(attributeKey);
     const attributeValueFr = new Fr(attributeValue);
     const issuedAtFr = new Fr(now);
-    const expiresAtFr = new Fr(oneYearFromNow);
+    const expiresAtFr = new Fr(expiresAt);
 
     // Hash credential fields with Poseidon2
     // CRITICAL: This hash MUST match what the Noir circuit computes via Poseidon2::hash(fields, 8)
@@ -187,8 +200,13 @@ function generateProverToml(cred: CredentialOutput): string {
 
   lines.push(`pub_key_x = "${cred.issuer_pub_key_x}"`);
   lines.push(`pub_key_y = "${cred.issuer_pub_key_y}"`);
+
+  // age_verify circuit public inputs
+  const currentTimestamp = BigInt(Math.floor(Date.now() / 1000));
+  const tsFr = new Fr(currentTimestamp);
+  lines.push(`current_timestamp = "${tsFr.toString()}"`);
+  lines.push(`threshold = "0x0000000000000000000000000000000000000000000000000000000000000012"`); // 18
   lines.push(`dapp_context_id = "${cred.dapp_context_id}"`);
-  lines.push(`expected_nullifier = "${cred.nullifier}"`);
   lines.push('');
 
   return lines.join('\n');
