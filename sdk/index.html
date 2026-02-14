@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StarkShield Proof Engine SDK - E2E Test</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+      background: #0a0a0a;
+      color: #e0e0e0;
+      padding: 2rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #7c3aed;
+      margin-bottom: 0.5rem;
+      font-size: 1.5rem;
+    }
+    .subtitle {
+      color: #888;
+      margin-bottom: 2rem;
+      font-size: 0.9rem;
+    }
+    .controls {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 0.75rem 1.5rem;
+      border: 1px solid #7c3aed;
+      background: #1a1a2e;
+      color: #c4b5fd;
+      font-size: 0.9rem;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    button:hover { background: #2d1b69; }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    #output {
+      background: #111;
+      border: 1px solid #333;
+      padding: 1rem;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-size: 0.85rem;
+      line-height: 1.6;
+      min-height: 400px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .log-info { color: #93c5fd; }
+    .log-success { color: #86efac; }
+    .log-error { color: #fca5a5; }
+    .log-warn { color: #fde68a; }
+    .log-time { color: #c4b5fd; }
+  </style>
+</head>
+<body>
+  <h1>StarkShield Proof Engine SDK - E2E Test</h1>
+  <p class="subtitle">Client-side ZK proof generation via noir_js + bb.js WASM</p>
+
+  <div class="controls">
+    <button id="btn-age" onclick="runAgeProof()">Generate Age Proof</button>
+    <button id="btn-membership" onclick="runMembershipProof()">Generate Membership Proof</button>
+    <button onclick="clearLog()">Clear Log</button>
+  </div>
+
+  <pre id="output"></pre>
+
+  <script type="module">
+    import {
+      initWasm,
+      validateAgeCredential,
+      validateMembershipCredential,
+      generateAgeProof,
+      generateMembershipProof,
+      verifyProofLocally,
+    } from './src/index.ts';
+
+    const output = document.getElementById('output');
+
+    function log(msg, cls = 'log-info') {
+      const span = document.createElement('span');
+      span.className = cls;
+      span.textContent = `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+      output.appendChild(span);
+      output.scrollTop = output.scrollHeight;
+    }
+
+    function clearLog() {
+      output.innerHTML = '';
+    }
+
+    function setButtons(disabled) {
+      document.getElementById('btn-age').disabled = disabled;
+      document.getElementById('btn-membership').disabled = disabled;
+    }
+
+    async function runAgeProof() {
+      setButtons(true);
+      try {
+        log('--- Age Verification Proof ---', 'log-warn');
+
+        log('Loading age credential...');
+        const resp = await fetch('/credentials/demo_credential.json');
+        if (!resp.ok) throw new Error(`Failed to fetch credential: ${resp.status}`);
+        const credential = await resp.json();
+        log(`Credential loaded: subject_id=${credential.subject_id.substring(0, 20)}...`);
+
+        log('Validating credential...');
+        const validation = validateAgeCredential(credential);
+        if (validation.valid) {
+          log('Credential is valid', 'log-success');
+        } else {
+          log(`Credential validation failed: ${validation.errors.join(', ')}`, 'log-error');
+          setButtons(false);
+          return;
+        }
+
+        log('Generating proof (this may take 10-30 seconds)...', 'log-warn');
+        const startTime = performance.now();
+        const proofResult = await generateAgeProof(credential, {
+          threshold: 18,
+          dappContextId: 42,
+        });
+        const totalTime = performance.now() - startTime;
+
+        log(`Proof generated!`, 'log-success');
+        log(`  Proof size: ${proofResult.proof.length} bytes`, 'log-time');
+        log(`  Public inputs: ${proofResult.publicInputs.length} fields`, 'log-time');
+        log(`  Proving time (backend only): ${proofResult.provingTimeMs.toFixed(0)}ms`, 'log-time');
+        log(`  Total time (incl. witness): ${totalTime.toFixed(0)}ms`, 'log-time');
+
+        log('Verifying proof locally...');
+        const isValid = await verifyProofLocally('age_verify', proofResult);
+        if (isValid) {
+          log('Proof verified locally: VALID', 'log-success');
+        } else {
+          log('Proof verified locally: INVALID', 'log-error');
+        }
+
+        log('--- Age proof complete ---\n', 'log-warn');
+      } catch (err) {
+        log(`ERROR: ${err.message}`, 'log-error');
+        if (err.stack) log(err.stack, 'log-error');
+      } finally {
+        setButtons(false);
+      }
+    }
+
+    async function runMembershipProof() {
+      setButtons(true);
+      try {
+        log('--- Membership Verification Proof ---', 'log-warn');
+
+        log('Loading membership credential...');
+        const resp = await fetch('/credentials/demo_credential_membership.json');
+        if (!resp.ok) throw new Error(`Failed to fetch credential: ${resp.status}`);
+        const credential = await resp.json();
+        log(`Credential loaded: subject_id=${credential.subject_id.substring(0, 20)}...`);
+
+        log('Validating credential...');
+        const validation = validateMembershipCredential(credential);
+        if (validation.valid) {
+          log('Credential is valid', 'log-success');
+        } else {
+          log(`Credential validation failed: ${validation.errors.join(', ')}`, 'log-error');
+          setButtons(false);
+          return;
+        }
+
+        // 0x64 = 100 decimal = the attribute_value in the demo membership credential
+        log('Generating proof (this may take 10-30 seconds)...', 'log-warn');
+        const startTime = performance.now();
+        const proofResult = await generateMembershipProof(credential, {
+          allowedSet: ['0x64', '0x65', '0x66'],
+          dappContextId: 42,
+        });
+        const totalTime = performance.now() - startTime;
+
+        log(`Proof generated!`, 'log-success');
+        log(`  Proof size: ${proofResult.proof.length} bytes`, 'log-time');
+        log(`  Public inputs: ${proofResult.publicInputs.length} fields`, 'log-time');
+        log(`  Proving time (backend only): ${proofResult.provingTimeMs.toFixed(0)}ms`, 'log-time');
+        log(`  Total time (incl. witness): ${totalTime.toFixed(0)}ms`, 'log-time');
+
+        log('Verifying proof locally...');
+        const isValid = await verifyProofLocally('membership_proof', proofResult);
+        if (isValid) {
+          log('Proof verified locally: VALID', 'log-success');
+        } else {
+          log('Proof verified locally: INVALID', 'log-error');
+        }
+
+        log('--- Membership proof complete ---\n', 'log-warn');
+      } catch (err) {
+        log(`ERROR: ${err.message}`, 'log-error');
+        if (err.stack) log(err.stack, 'log-error');
+      } finally {
+        setButtons(false);
+      }
+    }
+
+    // Expose functions globally for button onclick handlers
+    window.runAgeProof = runAgeProof;
+    window.runMembershipProof = runMembershipProof;
+    window.clearLog = clearLog;
+
+    // Log initialization status
+    log('StarkShield Proof Engine SDK loaded');
+    log('Click a button to generate a ZK proof');
+  </script>
+</body>
+</html>
