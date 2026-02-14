@@ -1,2 +1,6 @@
-// Shared library - crypto primitives for StarkShield circuits
-// Modules will be added in Plan 01-02
+pub mod credential;
+pub mod poseidon;
+pub mod schnorr;
+pub mod nullifier;
+
+use credential::Credential;
