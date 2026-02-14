@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Toolchain Validation & Circuit Foundation** - Validate full toolchain end-to-end, build shared crypto library, create demo credential issuer *(completed 2026-02-14)*
 - [x] **Phase 2: Age Verification Circuit** - Core circuit proving age >= threshold with signature verification, nullifiers, and expiration *(completed 2026-02-14)*
-- [ ] **Phase 3: Membership Verification Circuit** - Second credential type proving set membership, demonstrating protocol generality
+- [x] **Phase 3: Membership Verification Circuit** - Second credential type proving set membership, demonstrating protocol generality *(completed 2026-02-14)*
 - [ ] **Phase 4: Smart Contracts & Deployment** - Garaga verifier generation, StarkShieldRegistry contract, Sepolia deployment
 - [ ] **Phase 5: Proof Engine SDK** - Browser WASM proof generation via noir_js + bb.js with credential loading
 - [ ] **Phase 6: Wallet & Chain SDK** - Wallet connection, proof submission, and on-chain verification queries
@@ -64,7 +64,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 03-01-PLAN.md -- Build membership_proof circuit (set membership check, shared_lib reuse, bb pipeline validation, public output ordering)
+- [x] 03-01-PLAN.md -- Build membership_proof circuit (set membership check, shared_lib reuse, bb pipeline validation, public output ordering)
 
 ### Phase 4: Smart Contracts & Deployment
 **Goal**: On-chain infrastructure exists on Starknet Sepolia to verify ZK proofs, track nullifiers, manage trusted issuers, and log verifications -- a complete trust-minimized verification backend
@@ -151,7 +151,7 @@ Note: Phase 5 (Proof Engine SDK) depends only on Phase 2, not Phase 4. It can be
 |-------|----------------|--------|-----------|
 | 1. Toolchain Validation & Circuit Foundation | 2/2 | Complete | 2026-02-14 |
 | 2. Age Verification Circuit | 1/1 | Complete | 2026-02-14 |
-| 3. Membership Verification Circuit | 0/1 | Not started | - |
+| 3. Membership Verification Circuit | 1/1 | Complete | 2026-02-14 |
 | 4. Smart Contracts & Deployment | 0/2 | Not started | - |
 | 5. Proof Engine SDK | 0/1 | Not started | - |
 | 6. Wallet & Chain SDK | 0/2 | Not started | - |
