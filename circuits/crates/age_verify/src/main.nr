@@ -1,3 +1,21 @@
+// StarkShield Age Verification Circuit
+// ACIR opcodes: 1,224 (measured via nargo info)
+//
+// Public output ordering in bb proof format (verified empirically):
+//   Index 0: pub_key_x        (public input parameter)
+//   Index 1: pub_key_y        (public input parameter)
+//   Index 2: current_timestamp (public input parameter)
+//   Index 3: threshold         (public input parameter)
+//   Index 4: dapp_context_id   (public input parameter)
+//   Index 5: nullifier         (return value -- computed)
+//   Index 6: issuer_pub_key_x  (return value -- echoed from pub_key_x)
+//   Index 7: attribute_key     (return value -- echoed from credential)
+//   Index 8: threshold         (return value -- echoed from input)
+//
+// Pattern: pub parameters first (in declaration order), then return values (in tuple order).
+// Total: 9 public fields. No private data (subject_id, attribute_value, secret_salt,
+// issued_at, expires_at, signature) appears in the proof's public_inputs file.
+
 use dep::shared_lib::credential::Credential;
 use dep::shared_lib::schnorr::assert_credential_signature;
 use dep::shared_lib::nullifier::derive_nullifier;
