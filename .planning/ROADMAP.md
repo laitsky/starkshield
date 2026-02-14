@@ -76,11 +76,11 @@ Plans:
   3. Trusted issuers can be added and removed by the contract owner, and proofs from non-trusted issuers are rejected
   4. Verification records are queryable on-chain by nullifier, and past verifications are visible on Starkscan via events
   5. A single verification transaction costs less than 500,000 gas units on Sepolia
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: Garaga verifier generation and HonkVerifier deployment
-- [ ] 04-02: StarkShieldRegistry contract development, testing, and deployment
+- [ ] 04-01-PLAN.md -- Generate Garaga verifier contracts for age_verify and membership_proof, compile, declare, deploy to Sepolia, validate with verify-onchain
+- [ ] 04-02-PLAN.md -- Build StarkShieldRegistry contract (routing, nullifiers, issuers, events), test with snforge, deploy to Sepolia
 
 ### Phase 5: Proof Engine SDK
 **Goal**: A browser-based proof generation engine that loads credentials, computes witnesses, and generates ZK proofs entirely client-side via WASM -- no backend required
