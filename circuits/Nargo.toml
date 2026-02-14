@@ -1,0 +1,3 @@
+[workspace]
+members = ["crates/shared_lib", "crates/trivial"]
+default-member = "crates/trivial"

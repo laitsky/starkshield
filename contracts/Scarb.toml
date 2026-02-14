@@ -1,0 +1,11 @@
+[package]
+name = "starkshield_contracts"
+version = "0.1.0"
+edition = "2024_07"
+
+[dependencies]
+starknet = "2.15.0"
+garaga = "1.0.1"
+
+[[target.starknet-contract]]
+sierra = true

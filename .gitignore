@@ -1,0 +1,15 @@
+# Python virtual environment
+.venv/
+
+# Noir build artifacts
+circuits/target/
+
+# Cairo/Scarb build artifacts
+contracts/target/
+
+# OS files
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
