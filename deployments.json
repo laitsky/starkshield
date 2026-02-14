@@ -7,5 +7,20 @@
   "membership_verifier": {
     "class_hash": "0x69664e6f8e2e6c62985225357b7f14068237b3b171cf9aaf942aeff3f426ef9",
     "contract_address": "0x483b48c3dbd32ebbc45b22a2a419c9a95c3999b103f5eb4a3048a0e8000d1da"
+  },
+  "registry": {
+    "class_hash": "0x766599e83fe0cdcfc9895b4413da9b9ff977b81881c0f78ffb81f875dd19613",
+    "contract_address": "0x054ca264033ae3b5874574c84de9c6086d94a66fb65445e455a8cef3137b7fab"
+  },
+  "trusted_issuers": {
+    "age_demo_issuer_pub_key_x": "0x16e4953b04718a75e6b87b08bdcb3b4e7960e84604ac408c4dab76aff702a86f",
+    "membership_demo_issuer_pub_key_x": "0x0cf1cf3605ab9a87c812119274fafb6f06d0fe6258288b089c1b6f54c3c79e10"
+  },
+  "transactions": {
+    "registry_declaration": "0x291cd26cc938ccbb41083fbda531bcc308ea38e064532d24d7afb461f818b13",
+    "registry_deployment": "0x005dd7fb3322a9c4683d725b98687da9c799a268d44cbf965ea2553b6f2b0a24",
+    "add_age_issuer": "0x04c62eacb6379a3297888a61a8fac0f44727c7950b15f82bb7f834e543d22d06",
+    "add_membership_issuer": "0x03b6562726fc9122324a88d553120c7efcb5f96815bf6e748a0969bcb6da520b",
+    "verify_and_register_age": "0x00556479e6a2c1edafc3e8aad71fc020519cb0252576894ca37f5b1091116958"
   }
 }
