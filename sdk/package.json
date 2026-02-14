@@ -1,0 +1,20 @@
+{
+  "name": "starkshield-sdk",
+  "version": "0.1.0",
+  "description": "StarkShield Proof Engine SDK - client-side ZK proof generation",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@noir-lang/noir_js": "1.0.0-beta.16",
+    "@aztec/bb.js": "3.0.0-nightly.20251104",
+    "garaga": "1.0.1"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0",
+    "vite-plugin-node-polyfills": "0.25.0",
+    "typescript": "^5.0.0"
+  }
+}
