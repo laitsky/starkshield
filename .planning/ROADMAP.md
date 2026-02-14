@@ -32,11 +32,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. The shared_lib crate exports Poseidon2 hashing, Schnorr signature verification, nullifier derivation, and credential struct definition, and is importable by binary circuit crates
   3. The demo credential issuer script generates a Poseidon2-Schnorr keypair, signs a credential with 8 fields, and outputs a valid JSON file that the shared_lib can verify
   4. Running `nargo info` on the trivial circuit confirms the constraint measurement tooling works and the shared_lib primitives have known constraint costs
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: Toolchain installation, version pinning, and end-to-end spike
-- [ ] 01-02: Shared library crate and demo credential issuer
+- [ ] 01-01-PLAN.md -- Install and pin full toolchain (nargo, bb, Garaga, Scarb), scaffold project structure, validate complete compile-prove-verify pipeline with trivial circuit
+- [ ] 01-02-PLAN.md -- Build shared_lib crate (Poseidon2, Schnorr, nullifier, Credential struct), create TypeScript demo credential issuer, cross-validate Poseidon2 compatibility
 
 ### Phase 2: Age Verification Circuit
 **Goal**: Users can generate a zero-knowledge proof that their age meets a threshold without revealing their actual age, with full protocol features (issuer signatures, expiration, nullifiers, clean public outputs)
