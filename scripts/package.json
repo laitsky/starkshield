@@ -1,0 +1,22 @@
+{
+  "name": "scripts",
+  "version": "1.0.0",
+  "description": "StarkShield demo scripts - credential issuance and testing",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "issue": "npx tsx issuer.ts",
+    "issue:membership": "npx tsx issuer.ts --type membership"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@aztec/bb.js": "^0.82.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.3",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}

@@ -7,6 +7,14 @@ circuits/target/
 # Cairo/Scarb build artifacts
 contracts/target/
 
+# Node modules
+scripts/node_modules/
+scripts/dist/
+
+# Generated credential files (contain random values, should be regenerated)
+scripts/demo_credential*.json
+scripts/prover_*.toml
+
 # OS files
 .DS_Store
 
