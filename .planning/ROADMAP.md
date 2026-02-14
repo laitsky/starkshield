@@ -61,10 +61,10 @@ Plans:
   1. The membership_proof circuit accepts a signed credential with a membership attribute and an allowed set, and proves the user's value is in the set without revealing it
   2. The circuit reuses shared_lib for signature verification, nullifier derivation, and expiration -- same security guarantees as age verification
   3. Both circuits (age_verify and membership_proof) compile and their combined constraint counts remain under 50K each (verified via `nargo info`)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 03-01: Membership verification circuit implementation and testing
+- [ ] 03-01-PLAN.md -- Build membership_proof circuit (set membership check, shared_lib reuse, bb pipeline validation, public output ordering)
 
 ### Phase 4: Smart Contracts & Deployment
 **Goal**: On-chain infrastructure exists on Starknet Sepolia to verify ZK proofs, track nullifiers, manage trusted issuers, and log verifications -- a complete trust-minimized verification backend
