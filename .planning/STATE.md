@@ -5,22 +5,22 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Users can prove who they are without revealing who they are -- private credential verification that is fully on-chain, composable, and trust-minimized.
-**Current focus:** Phase 2 - Age Verification Circuit (complete, ready for Phase 3)
+**Current focus:** Phase 3 - Membership Verification Circuit (complete, ready for Phase 4)
 
 ## Current Position
 
-Phase: 2 of 8 (Age Verification Circuit)
+Phase: 3 of 8 (Membership Verification Circuit)
 Plan: 1 of 1 in current phase
 Status: Phase complete
-Last activity: 2026-02-14 -- Phase 2 Plan 1 executed (age_verify circuit + bb pipeline)
+Last activity: 2026-02-14 -- Phase 3 Plan 1 executed (membership_proof circuit + bb pipeline)
 
-Progress: [███░░░░░░░] 25%
+Progress: [████░░░░░░] 38%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 81min
+- Total plans completed: 4
+- Average duration: 61min
 - Total execution time: 4.1 hours
 
 **By Phase:**
@@ -29,9 +29,10 @@ Progress: [███░░░░░░░] 25%
 |-------|-------|-------|----------|
 | 01 | 2/2 | 237min | 119min |
 | 02 | 1/1 | 4min | 4min |
+| 03 | 1/1 | 4min | 4min |
 
 **Recent Trend:**
-- Last 5 plans: 227min, 10min, 4min
+- Last 5 plans: 227min, 10min, 4min, 4min
 - Trend: accelerating
 
 *Updated after each plan completion*
@@ -57,6 +58,11 @@ Recent decisions affecting current work:
 - [02-01]: Return values for computed outputs instead of Phase 1's expected-value assertion pattern
 - [02-01]: Public output ordering: pub params first (declaration order), then return values (tuple order)
 - [02-01]: 1,224 ACIR opcodes for age_verify circuit (well under 5,000 target)
+- [03-01]: Linear scan over [Field; 8] for set membership -- 29 extra ACIR opcodes vs Merkle tree complexity
+- [03-01]: Zero-value guard (assert attribute_value != 0) prevents false match on zero-padded array slots
+- [03-01]: Return Poseidon2 hash of allowed_set for compact on-chain verification (1 Field vs 8)
+- [03-01]: 1,253 ACIR opcodes for membership_proof circuit (only 29 more than age_verify)
+- [03-01]: 16 public fields in membership_proof bb proof: 4 scalar params + 8 array elements + 4 return values
 
 ### Pending Todos
 
@@ -72,5 +78,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 02-01-PLAN.md (Phase 2 complete, ready for Phase 3)
-Resume file: .planning/phases/02-age-verification-circuit/02-01-SUMMARY.md
+Stopped at: Completed 03-01-PLAN.md (Phase 3 complete, ready for Phase 4)
+Resume file: .planning/phases/03-membership-verification-circuit/03-01-SUMMARY.md
