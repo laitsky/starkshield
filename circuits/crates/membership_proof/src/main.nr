@@ -1,4 +1,5 @@
 // StarkShield Membership Verification Circuit
+// ACIR opcodes: 1,253 (measured via nargo info)
 //
 // Proves that a signed credential's attribute_value is a member of a public
 // allowed_set without revealing which element matched.
@@ -10,7 +11,28 @@
 //   4. Set membership proven (attribute_value in allowed_set)
 //   5. Per-dApp nullifier derived for double-use prevention
 //
-// Public outputs: (nullifier, issuer_pub_key_x, attribute_key, allowed_set_hash)
+// Public output ordering in bb proof format (verified empirically):
+//   Index  0: pub_key_x        (public input parameter)
+//   Index  1: pub_key_y        (public input parameter)
+//   Index  2: current_timestamp (public input parameter)
+//   Index  3: dapp_context_id   (public input parameter)
+//   Index  4: allowed_set[0]    (public input parameter -- array element)
+//   Index  5: allowed_set[1]    (public input parameter -- array element)
+//   Index  6: allowed_set[2]    (public input parameter -- array element)
+//   Index  7: allowed_set[3]    (public input parameter -- array element)
+//   Index  8: allowed_set[4]    (public input parameter -- array element)
+//   Index  9: allowed_set[5]    (public input parameter -- array element)
+//   Index 10: allowed_set[6]    (public input parameter -- array element)
+//   Index 11: allowed_set[7]    (public input parameter -- array element)
+//   Index 12: nullifier         (return value -- computed)
+//   Index 13: issuer_pub_key_x  (return value -- echoed from pub_key_x)
+//   Index 14: attribute_key     (return value -- echoed from credential)
+//   Index 15: allowed_set_hash  (return value -- Poseidon2 hash of allowed_set)
+//
+// Pattern: pub parameters first (in declaration order), then return values (in tuple order).
+// Total: 16 public fields (4 scalar params + 8 array elements + 4 return values).
+// No private data (subject_id, attribute_value, secret_salt, issued_at, expires_at,
+// signature) appears in the proof's public_inputs file.
 
 use dep::shared_lib::credential::Credential;
 use dep::shared_lib::schnorr::assert_credential_signature;
