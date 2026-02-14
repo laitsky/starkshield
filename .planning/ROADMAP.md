@@ -12,7 +12,7 @@ StarkShield delivers privacy-preserving credential verification on Starknet in 8
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Toolchain Validation & Circuit Foundation** - Validate full toolchain end-to-end, build shared crypto library, create demo credential issuer
+- [x] **Phase 1: Toolchain Validation & Circuit Foundation** - Validate full toolchain end-to-end, build shared crypto library, create demo credential issuer *(completed 2026-02-14)*
 - [ ] **Phase 2: Age Verification Circuit** - Core circuit proving age >= threshold with signature verification, nullifiers, and expiration
 - [ ] **Phase 3: Membership Verification Circuit** - Second credential type proving set membership, demonstrating protocol generality
 - [ ] **Phase 4: Smart Contracts & Deployment** - Garaga verifier generation, StarkShieldRegistry contract, Sepolia deployment
@@ -35,8 +35,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md -- Install and pin full toolchain (nargo, bb, Garaga, Scarb), scaffold project structure, validate complete compile-prove-verify pipeline with trivial circuit
-- [ ] 01-02-PLAN.md -- Build shared_lib crate (Poseidon2, Schnorr, nullifier, Credential struct), create TypeScript demo credential issuer, cross-validate Poseidon2 compatibility
+- [x] 01-01-PLAN.md -- Install and pin full toolchain (nargo, bb, Garaga, Scarb), scaffold project structure, validate complete compile-prove-verify pipeline with trivial circuit
+- [x] 01-02-PLAN.md -- Build shared_lib crate (Poseidon2, Schnorr, nullifier, Credential struct), create TypeScript demo credential issuer, cross-validate Poseidon2 compatibility
 
 ### Phase 2: Age Verification Circuit
 **Goal**: Users can generate a zero-knowledge proof that their age meets a threshold without revealing their actual age, with full protocol features (issuer signatures, expiration, nullifiers, clean public outputs)
@@ -149,7 +149,7 @@ Note: Phase 5 (Proof Engine SDK) depends only on Phase 2, not Phase 4. It can be
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Toolchain Validation & Circuit Foundation | 0/2 | Not started | - |
+| 1. Toolchain Validation & Circuit Foundation | 2/2 | Complete | 2026-02-14 |
 | 2. Age Verification Circuit | 0/1 | Not started | - |
 | 3. Membership Verification Circuit | 0/1 | Not started | - |
 | 4. Smart Contracts & Deployment | 0/2 | Not started | - |
