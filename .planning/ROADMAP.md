@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Toolchain Validation & Circuit Foundation** - Validate full toolchain end-to-end, build shared crypto library, create demo credential issuer *(completed 2026-02-14)*
 - [x] **Phase 2: Age Verification Circuit** - Core circuit proving age >= threshold with signature verification, nullifiers, and expiration *(completed 2026-02-14)*
 - [x] **Phase 3: Membership Verification Circuit** - Second credential type proving set membership, demonstrating protocol generality *(completed 2026-02-14)*
-- [ ] **Phase 4: Smart Contracts & Deployment** - Garaga verifier generation, StarkShieldRegistry contract, Sepolia deployment
+- [x] **Phase 4: Smart Contracts & Deployment** - Garaga verifier generation, StarkShieldRegistry contract, Sepolia deployment *(completed 2026-02-14)*
 - [ ] **Phase 5: Proof Engine SDK** - Browser WASM proof generation via noir_js + bb.js with credential loading
 - [ ] **Phase 6: Wallet & Chain SDK** - Wallet connection, proof submission, and on-chain verification queries
 - [ ] **Phase 7: Web Application** - React SPA with Credential Wallet, Proof Generator, and Verification Dashboard views
@@ -79,8 +79,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md -- Generate Garaga verifier contracts for age_verify and membership_proof, compile, declare, deploy to Sepolia, validate with verify-onchain
-- [ ] 04-02-PLAN.md -- Build StarkShieldRegistry contract (routing, nullifiers, issuers, events), test with snforge, deploy to Sepolia
+- [x] 04-01-PLAN.md -- Generate Garaga verifier contracts for age_verify and membership_proof, compile, declare, deploy to Sepolia, validate with verify-onchain
+- [x] 04-02-PLAN.md -- Build StarkShieldRegistry contract (routing, nullifiers, issuers, events), test with snforge, deploy to Sepolia
 
 ### Phase 5: Proof Engine SDK
 **Goal**: A browser-based proof generation engine that loads credentials, computes witnesses, and generates ZK proofs entirely client-side via WASM -- no backend required
@@ -90,10 +90,10 @@ Plans:
   1. The proof engine initializes noir_js and bb.js WASM backends in a browser environment and generates a valid proof from a demo credential JSON file
   2. Credential JSON files are loaded, validated (correct schema, required fields present), and transformed into circuit-compatible witness inputs
   3. Proof generation completes in under 30 seconds on modern hardware (M1 or equivalent) in a browser tab with SharedArrayBuffer enabled
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 05-01: Proof engine with WASM initialization, credential loading, and proof generation
+- [ ] 05-01-PLAN.md -- Scaffold SDK package, build WASM init + credential loading + proof generation modules, validate with browser E2E test page
 
 ### Phase 6: Wallet & Chain SDK
 **Goal**: Users can connect their Starknet wallet, submit ZK proofs to the on-chain registry, and query verification results -- the complete chain interaction layer
@@ -152,7 +152,7 @@ Note: Phase 5 (Proof Engine SDK) depends only on Phase 2, not Phase 4. It can be
 | 1. Toolchain Validation & Circuit Foundation | 2/2 | Complete | 2026-02-14 |
 | 2. Age Verification Circuit | 1/1 | Complete | 2026-02-14 |
 | 3. Membership Verification Circuit | 1/1 | Complete | 2026-02-14 |
-| 4. Smart Contracts & Deployment | 0/2 | Not started | - |
+| 4. Smart Contracts & Deployment | 2/2 | Complete | 2026-02-14 |
 | 5. Proof Engine SDK | 0/1 | Not started | - |
 | 6. Wallet & Chain SDK | 0/2 | Not started | - |
 | 7. Web Application | 0/3 | Not started | - |
