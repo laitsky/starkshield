@@ -5,32 +5,33 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Users can prove who they are without revealing who they are -- private credential verification that is fully on-chain, composable, and trust-minimized.
-**Current focus:** Phase 2 - Age Verification Circuit (next to plan)
+**Current focus:** Phase 2 - Age Verification Circuit (complete, ready for Phase 3)
 
 ## Current Position
 
 Phase: 2 of 8 (Age Verification Circuit)
-Plan: 0 of 1 in current phase
-Status: Ready to plan
-Last activity: 2026-02-14 -- Phase 1 verified and complete
+Plan: 1 of 1 in current phase
+Status: Phase complete
+Last activity: 2026-02-14 -- Phase 2 Plan 1 executed (age_verify circuit + bb pipeline)
 
-Progress: [██░░░░░░░░] 13%
+Progress: [███░░░░░░░] 25%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 119min
-- Total execution time: 4.0 hours
+- Total plans completed: 3
+- Average duration: 81min
+- Total execution time: 4.1 hours
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 | 2/2 | 237min | 119min |
+| 02 | 1/1 | 4min | 4min |
 
 **Recent Trend:**
-- Last 5 plans: 227min, 10min
+- Last 5 plans: 227min, 10min, 4min
 - Trend: accelerating
 
 *Updated after each plan completion*
@@ -52,6 +53,10 @@ Recent decisions affecting current work:
 - [01-02]: bb verify requires explicit -i public_inputs_path flag
 - [01-02]: @aztec/bb.js@0.82.3 used for TypeScript credential issuance
 - [Roadmap]: Phase 5 (Proof Engine SDK) can overlap with Phases 3-4 since it only needs Phase 2 circuit artifacts
+- [02-01]: Hard-assert all checks (signature, expiration, age >= threshold) -- proof existence IS the pass signal
+- [02-01]: Return values for computed outputs instead of Phase 1's expected-value assertion pattern
+- [02-01]: Public output ordering: pub params first (declaration order), then return values (tuple order)
+- [02-01]: 1,224 ACIR opcodes for age_verify circuit (well under 5,000 target)
 
 ### Pending Todos
 
@@ -67,5 +72,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Phase 1 complete and verified, ready for Phase 2
-Resume file: .planning/phases/01-toolchain-validation-circuit-foundation/01-VERIFICATION.md
+Stopped at: Completed 02-01-PLAN.md (Phase 2 complete, ready for Phase 3)
+Resume file: .planning/phases/02-age-verification-circuit/02-01-SUMMARY.md
