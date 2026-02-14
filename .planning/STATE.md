@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Users can prove who they are without revealing who they are -- private credential verification that is fully on-chain, composable, and trust-minimized.
-**Current focus:** Phase 3 - Membership Verification Circuit (complete, ready for Phase 4)
+**Current focus:** Phase 4 - Smart Contracts & Deployment (Plan 01 complete, Plan 02 next)
 
 ## Current Position
 
-Phase: 3 of 8 (Membership Verification Circuit)
-Plan: 1 of 1 in current phase
-Status: Phase complete
-Last activity: 2026-02-14 -- Phase 3 Plan 1 executed (membership_proof circuit + bb pipeline)
+Phase: 4 of 8 (Smart Contracts & Deployment)
+Plan: 1 of 2 in current phase (complete)
+Status: Plan 04-01 complete, Plan 04-02 ready
+Last activity: 2026-02-14 -- Plan 04-01 executed (Garaga verifiers deployed on Sepolia)
 
-Progress: [████░░░░░░] 38%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
-- Average duration: 61min
-- Total execution time: 4.1 hours
+- Total plans completed: 5
+- Average duration: 54min
+- Total execution time: 4.5 hours
 
 **By Phase:**
 
@@ -30,10 +30,11 @@ Progress: [████░░░░░░] 38%
 | 01 | 2/2 | 237min | 119min |
 | 02 | 1/1 | 4min | 4min |
 | 03 | 1/1 | 4min | 4min |
+| 04 | 1/2 | 25min | 25min |
 
 **Recent Trend:**
-- Last 5 plans: 227min, 10min, 4min, 4min
-- Trend: accelerating
+- Last 5 plans: 10min, 4min, 4min, 25min
+- Trend: stable
 
 *Updated after each plan completion*
 
@@ -63,6 +64,11 @@ Recent decisions affecting current work:
 - [03-01]: Return Poseidon2 hash of allowed_set for compact on-chain verification (1 Field vs 8)
 - [03-01]: 1,253 ACIR opcodes for membership_proof circuit (only 29 more than age_verify)
 - [03-01]: 16 public fields in membership_proof bb proof: 4 scalar params + 8 array elements + 4 return values
+- [04-01]: Garaga public_inputs_size (25/32) includes internal Honk elements beyond Noir-level count (9/16)
+- [04-01]: garaga verify-onchain requires explicit --public-inputs flag for Honk proofs
+- [04-01]: Env vars follow garaga convention: SEPOLIA_RPC_URL, SEPOLIA_ACCOUNT_PRIVATE_KEY, SEPOLIA_ACCOUNT_ADDRESS
+- [04-01]: Verifier interface: verify_ultra_keccak_zk_honk_proof(Span<felt252>) -> Result<Span<u256>, felt252>
+- [04-01]: Gas baseline: ~2.19 STRK per verifier-only call (128 l1_data_gas)
 
 ### Pending Todos
 
@@ -78,5 +84,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 03-01-PLAN.md (Phase 3 complete, ready for Phase 4)
-Resume file: .planning/phases/03-membership-verification-circuit/03-01-SUMMARY.md
+Stopped at: Completed 04-01-PLAN.md (Garaga verifiers deployed, executing Plan 04-02 next)
+Resume file: .planning/phases/04-smart-contracts-deployment/04-01-SUMMARY.md

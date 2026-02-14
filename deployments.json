@@ -1,0 +1,11 @@
+{
+  "network": "sepolia",
+  "age_verifier": {
+    "class_hash": "0x7486ff3cb7c7db4ce5b62de993f204aeec12fd37bca734f1046eba6f9a8f629",
+    "contract_address": "0x9afed88f1d6bb0da51d98d29a3aaca31ed7ca99dc51a3df06931c543694f52"
+  },
+  "membership_verifier": {
+    "class_hash": "0x69664e6f8e2e6c62985225357b7f14068237b3b171cf9aaf942aeff3f426ef9",
+    "contract_address": "0x483b48c3dbd32ebbc45b22a2a419c9a95c3999b103f5eb4a3048a0e8000d1da"
+  }
+}
