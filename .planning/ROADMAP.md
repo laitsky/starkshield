@@ -48,10 +48,10 @@ Plans:
   3. An expired credential (current_timestamp >= expires_at) is rejected by the circuit regardless of age value
   4. A credential signed by a different keypair than the one verified in-circuit is rejected (signature verification enforced)
   5. The same user verifying the same credential with two different dApp context_ids produces two different nullifiers (cross-dApp unlinkability), and the same context_id always produces the same nullifier (replay detection)
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 02-01: Age verification circuit implementation and testing
+- [ ] 02-01-PLAN.md -- Build age_verify circuit crate (imports shared_lib, hard-asserts signature/expiration/threshold, returns nullifier + public outputs), validate full bb prove/verify pipeline, document public output ordering
 
 ### Phase 3: Membership Verification Circuit
 **Goal**: Users can generate a zero-knowledge proof of group membership without revealing which member they are, proving the protocol handles multiple credential types
