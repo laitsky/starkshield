@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Users can prove who they are without revealing who they are -- private credential verification that is fully on-chain, composable, and trust-minimized.
-**Current focus:** Phase 4 - Smart Contracts & Deployment (Plan 01 complete, Plan 02 next)
+**Current focus:** Phase 4 - Smart Contracts & Deployment (COMPLETE -- both plans done)
 
 ## Current Position
 
-Phase: 4 of 8 (Smart Contracts & Deployment)
-Plan: 1 of 2 in current phase (complete)
-Status: Plan 04-01 complete, Plan 04-02 ready
-Last activity: 2026-02-14 -- Plan 04-01 executed (Garaga verifiers deployed on Sepolia)
+Phase: 4 of 8 (Smart Contracts & Deployment) -- COMPLETE
+Plan: 2 of 2 in current phase (complete)
+Status: Phase 04 complete, ready for Phase 05 (Proof Engine SDK)
+Last activity: 2026-02-14 -- Plan 04-02 executed (StarkShieldRegistry deployed + validated on Sepolia)
 
-Progress: [█████░░░░░] 50%
+Progress: [██████░░░░] 60%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 54min
-- Total execution time: 4.5 hours
+- Total plans completed: 6
+- Average duration: 47min
+- Total execution time: 4.7 hours
 
 **By Phase:**
 
@@ -30,10 +30,10 @@ Progress: [█████░░░░░] 50%
 | 01 | 2/2 | 237min | 119min |
 | 02 | 1/1 | 4min | 4min |
 | 03 | 1/1 | 4min | 4min |
-| 04 | 1/2 | 25min | 25min |
+| 04 | 2/2 | 37min | 19min |
 
 **Recent Trend:**
-- Last 5 plans: 10min, 4min, 4min, 25min
+- Last 5 plans: 4min, 4min, 25min, 12min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -69,6 +69,11 @@ Recent decisions affecting current work:
 - [04-01]: Env vars follow garaga convention: SEPOLIA_RPC_URL, SEPOLIA_ACCOUNT_PRIVATE_KEY, SEPOLIA_ACCOUNT_ADDRESS
 - [04-01]: Verifier interface: verify_ultra_keccak_zk_honk_proof(Span<felt252>) -> Result<Span<u256>, felt252>
 - [04-01]: Gas baseline: ~2.19 STRK per verifier-only call (128 l1_data_gas)
+- [04-02]: Hand-rolled ownable (assert_only_owner) instead of OpenZeppelin due to Scarb 2.14.0 version gap
+- [04-02]: sncast for registry deployment (garaga CLI only for verifier contracts)
+- [04-02]: u256 calldata serialization: low 128 bits first, high 128 bits second
+- [04-02]: verify_and_register gas: ~2.25 STRK (l2_gas 281M, l1_data_gas 768) -- registry adds minimal overhead
+- [04-02]: Both demo issuers (age + membership) have different key pairs -- both registered as trusted
 
 ### Pending Todos
 
@@ -84,5 +89,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-14
-Stopped at: Completed 04-01-PLAN.md (Garaga verifiers deployed, executing Plan 04-02 next)
-Resume file: .planning/phases/04-smart-contracts-deployment/04-01-SUMMARY.md
+Stopped at: Completed 04-02-PLAN.md (Phase 04 complete -- all contracts deployed on Sepolia)
+Resume file: .planning/phases/04-smart-contracts-deployment/04-02-SUMMARY.md
