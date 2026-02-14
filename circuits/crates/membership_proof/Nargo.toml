@@ -1,0 +1,8 @@
+[package]
+name = "membership_proof"
+type = "bin"
+compiler_version = ">=0.36.0"
+
+[dependencies]
+poseidon = { tag = "v0.2.3", git = "https://github.com/noir-lang/poseidon" }
+shared_lib = { path = "../shared_lib" }

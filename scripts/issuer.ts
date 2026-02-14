@@ -173,7 +173,7 @@ async function main() {
     console.log(`\nDemo credential written to ${filename}`);
 
     // Also generate Prover.toml format for Noir circuit
-    const proverToml = generateProverToml(credential);
+    const proverToml = generateProverToml(credential, isMembership);
     const proverFilename = isMembership ? 'prover_membership.toml' : 'prover_age.toml';
     writeFileSync(proverFilename, proverToml);
     console.log(`Prover.toml written to ${proverFilename}`);
@@ -183,7 +183,7 @@ async function main() {
   }
 }
 
-function generateProverToml(cred: CredentialOutput): string {
+function generateProverToml(cred: CredentialOutput, isMembership: boolean): string {
   const lines: string[] = [];
   lines.push(`subject_id = "${cred.subject_id}"`);
   lines.push(`issuer_id = "${cred.issuer_id}"`);
@@ -201,14 +201,32 @@ function generateProverToml(cred: CredentialOutput): string {
   lines.push(`pub_key_x = "${cred.issuer_pub_key_x}"`);
   lines.push(`pub_key_y = "${cred.issuer_pub_key_y}"`);
 
-  // age_verify circuit public inputs
+  // Public inputs: timestamp and dapp context
   const currentTimestamp = BigInt(Math.floor(Date.now() / 1000));
   const tsFr = new Fr(currentTimestamp);
   lines.push(`current_timestamp = "${tsFr.toString()}"`);
-  lines.push(`threshold = "0x0000000000000000000000000000000000000000000000000000000000000012"`); // 18
   lines.push(`dapp_context_id = "${cred.dapp_context_id}"`);
-  lines.push('');
 
+  if (isMembership) {
+    // Membership circuit: allowed_set instead of threshold
+    // Include the credential's attribute_value plus additional group IDs, zero-padded to 8
+    const allowedSet = [
+      cred.attribute_value, // The credential's value (e.g., group ID 100)
+      "0x00000000000000000000000000000000000000000000000000000000000000c8", // 200
+      "0x000000000000000000000000000000000000000000000000000000000000012c", // 300
+      "0x0000000000000000000000000000000000000000000000000000000000000000", // padding
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      "0x0000000000000000000000000000000000000000000000000000000000000000",
+    ];
+    lines.push(`allowed_set = [${allowedSet.map(v => `"${v}"`).join(', ')}]`);
+  } else {
+    // Age circuit: threshold
+    lines.push(`threshold = "0x0000000000000000000000000000000000000000000000000000000000000012"`); // 18
+  }
+
+  lines.push('');
   return lines.join('\n');
 }
 
