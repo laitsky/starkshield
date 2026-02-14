@@ -6,6 +6,11 @@ circuits/target/
 
 # Cairo/Scarb build artifacts
 contracts/target/
+contracts_age_verifier/target/
+contracts_membership_verifier/target/
+
+# Deployment secrets (private keys, account addresses)
+.secrets
 
 # Node modules
 scripts/node_modules/
