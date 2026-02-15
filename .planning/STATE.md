@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Users can prove who they are without revealing who they are -- private credential verification that is fully on-chain, composable, and trust-minimized.
-**Current focus:** Phase 6 - Wallet & Chain SDK (Plan 01 complete, Plan 02 remaining)
+**Current focus:** Phase 6 complete -- Ready for Phase 7
 
 ## Current Position
 
-Phase: 6 of 8 (Wallet & Chain SDK)
-Plan: 1 of 2 in current phase (complete)
-Status: Plan 06-01 complete -- wallet connection + proof submission modules built
-Last activity: 2026-02-15 -- Wallet and chain SDK modules created, TypeScript compiles clean
+Phase: 6 of 8 (Wallet & Chain SDK) -- COMPLETE
+Plan: 2 of 2 in current phase (complete)
+Status: Phase 6 complete -- all SDK modules built (config, wallet, submitter, reader)
+Last activity: 2026-02-15 -- On-chain reader module and E2E test page completed
 
-Progress: [████████░░] 80%
+Progress: [█████████░] 85%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
-- Average duration: 37min
-- Total execution time: 4.9 hours
+- Total plans completed: 9
+- Average duration: 33min
+- Total execution time: 5.0 hours
 
 **By Phase:**
 
@@ -32,10 +32,10 @@ Progress: [████████░░] 80%
 | 03 | 1/1 | 4min | 4min |
 | 04 | 2/2 | 37min | 19min |
 | 05 | 1/1 | 5min | 5min |
-| 06 | 1/2 | 4min | 4min |
+| 06 | 2/2 | 7min | 4min |
 
 **Recent Trend:**
-- Last 5 plans: 4min, 25min, 12min, 5min, 4min
+- Last 5 plans: 25min, 12min, 5min, 4min, 3min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -86,6 +86,9 @@ Recent decisions affecting current work:
 - [06-01]: COEP changed from require-corp to credentialless for wallet modal cross-origin compatibility
 - [06-01]: Inline flattenPublicInputs instead of importing flattenFieldsAsArray (not re-exported from bb.js top-level)
 - [06-01]: Type assertion (as any) for get-starknet -> WalletAccount.connect due to differing StarknetWindowObject type packages
+- [06-02]: starknet.js v8 Contract constructor uses options object { abi, address, providerOrAccount } not positional args
+- [06-02]: Minimal inlined ABI includes u256 struct definition for Contract auto-serialization of bigint args
+- [06-02]: Cached Contract instance for repeated read queries (singleton pattern)
 
 ### Pending Todos
 
@@ -101,5 +104,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Completed 06-01-PLAN.md -- wallet + proof submission modules
-Resume file: .planning/phases/06-wallet-chain-sdk/06-01-SUMMARY.md
+Stopped at: Completed 06-02-PLAN.md -- on-chain reader module + E2E test page
+Resume file: .planning/phases/06-wallet-chain-sdk/06-02-SUMMARY.md
