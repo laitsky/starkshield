@@ -16,8 +16,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Age Verification Circuit** - Core circuit proving age >= threshold with signature verification, nullifiers, and expiration *(completed 2026-02-14)*
 - [x] **Phase 3: Membership Verification Circuit** - Second credential type proving set membership, demonstrating protocol generality *(completed 2026-02-14)*
 - [x] **Phase 4: Smart Contracts & Deployment** - Garaga verifier generation, StarkShieldRegistry contract, Sepolia deployment *(completed 2026-02-14)*
-- [ ] **Phase 5: Proof Engine SDK** - Browser WASM proof generation via noir_js + bb.js with credential loading
-- [ ] **Phase 6: Wallet & Chain SDK** - Wallet connection, proof submission, and on-chain verification queries
+- [x] **Phase 5: Proof Engine SDK** - Browser WASM proof generation via noir_js + bb.js with credential loading *(completed 2026-02-15)*
+- [x] **Phase 6: Wallet & Chain SDK** - Wallet connection, proof submission, and on-chain verification queries *(completed 2026-02-15)*
 - [ ] **Phase 7: Web Application** - React SPA with Credential Wallet, Proof Generator, and Verification Dashboard views
 - [ ] **Phase 8: Demo & Submission** - Demo video, README with architecture diagram, DoraHacks BUIDL submission
 
@@ -153,8 +153,8 @@ Note: Phase 5 (Proof Engine SDK) depends only on Phase 2, not Phase 4. It can be
 | 2. Age Verification Circuit | 1/1 | Complete | 2026-02-14 |
 | 3. Membership Verification Circuit | 1/1 | Complete | 2026-02-14 |
 | 4. Smart Contracts & Deployment | 2/2 | Complete | 2026-02-14 |
-| 5. Proof Engine SDK | 0/1 | Not started | - |
-| 6. Wallet & Chain SDK | 0/2 | Not started | - |
+| 5. Proof Engine SDK | 1/1 | Complete | 2026-02-15 |
+| 6. Wallet & Chain SDK | 2/2 | Complete | 2026-02-15 |
 | 7. Web Application | 0/3 | Not started | - |
 | 8. Demo & Submission | 0/2 | Not started | - |
 
