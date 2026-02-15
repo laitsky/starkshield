@@ -5,14 +5,14 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Users can prove who they are without revealing who they are -- private credential verification that is fully on-chain, composable, and trust-minimized.
-**Current focus:** Phase 5 - Proof Engine SDK (COMPLETE -- 1 plan done)
+**Current focus:** Phase 5 - Proof Engine SDK (VERIFIED -- browser proofs working)
 
 ## Current Position
 
-Phase: 5 of 8 (Proof Engine SDK) -- COMPLETE
-Plan: 1 of 1 in current phase (complete)
-Status: Phase 05 complete, ready for Phase 06
-Last activity: 2026-02-14 -- Plan 05-01 executed (Proof Engine SDK built + validated)
+Phase: 5 of 8 (Proof Engine SDK) -- VERIFIED
+Plan: 1 of 1 in current phase (complete + verified)
+Status: Phase 05 verified, ready for Phase 06
+Last activity: 2026-02-15 -- Browser runtime fixes applied, both age + membership proofs verified in Chrome
 
 Progress: [███████░░░] 70%
 
@@ -79,6 +79,9 @@ Recent decisions affecting current work:
 - [05-01]: Using { keccak: true } for browser proof generation (matches Phase 4 CLI bb prove --oracle_hash keccak)
 - [05-01]: bb.js excluded from Vite optimizeDeps to prevent WASM loading breakage
 - [05-01]: Signature array mapped via .map(b => b.toString()) for noir_js InputMap string requirement
+- [05-01]: @noir-lang/acvm_js and noirc_abi need Vite resolve.alias to /web/ entry points (packages default to Node.js)
+- [05-01]: WASM binaries must be served from public/wasm/ (Vite alias conflicts with ?url imports)
+- [05-01]: pino needs ESM shim -- bb.js does `import { pino }` but pino/browser.js is CJS default export
 
 ### Pending Todos
 
@@ -93,6 +96,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-14
-Stopped at: Completed 05-01-PLAN.md (Phase 05 complete -- Proof Engine SDK built)
-Resume file: .planning/phases/05-proof-engine-sdk/05-01-SUMMARY.md
+Last session: 2026-02-15
+Stopped at: Phase 05 verified -- browser proofs working for both circuits
+Resume file: .planning/phases/05-proof-engine-sdk/05-VERIFICATION.md
