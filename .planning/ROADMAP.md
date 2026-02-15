@@ -93,7 +93,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 05-01-PLAN.md -- Scaffold SDK package, build WASM init + credential loading + proof generation modules, validate with browser E2E test page
+- [x] 05-01-PLAN.md -- Scaffold SDK package, build WASM init + credential loading + proof generation modules, validate with browser E2E test page
 
 ### Phase 6: Wallet & Chain SDK
 **Goal**: Users can connect their Starknet wallet, submit ZK proofs to the on-chain registry, and query verification results -- the complete chain interaction layer
@@ -106,8 +106,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 06-01-PLAN.md -- Install starknet.js v8 + get-starknet v4, create config/wallet/submitter modules, bundle VK assets, enable wallet connection and proof submission
-- [ ] 06-02-PLAN.md -- Build on-chain reader module for verification status querying, update E2E test page with full wallet-to-chain flow
+- [x] 06-01-PLAN.md -- Install starknet.js v8 + get-starknet v4, create config/wallet/submitter modules, bundle VK assets, enable wallet connection and proof submission
+- [x] 06-02-PLAN.md -- Build on-chain reader module for verification status querying, update E2E test page with full wallet-to-chain flow
 
 ### Phase 7: Web Application
 **Goal**: A complete React SPA where users can view their credentials, generate and submit proofs, review past verifications, and understand exactly what data stays private -- the full user-facing product
@@ -122,9 +122,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 07-01-PLAN.md -- React SPA scaffold with React 19, Tailwind v4, wallet context, and Credential Wallet view (WEB-01)
-- [ ] 07-02-PLAN.md -- Proof Generator view with progress indicators, public output preview, and on-chain submission (WEB-02)
-- [ ] 07-03-PLAN.md -- Verification Dashboard, privacy callouts, and error handling (WEB-03, WEB-04, WEB-06)
+- [x] 07-01-PLAN.md -- React SPA scaffold with React 19, Tailwind v4, wallet context, and Credential Wallet view (WEB-01)
+- [x] 07-02-PLAN.md -- Proof Generator view with progress indicators, public output preview, and on-chain submission (WEB-02)
+- [x] 07-03-PLAN.md -- Verification Dashboard, privacy callouts, and error handling (WEB-03, WEB-04, WEB-06)
 
 ### Phase 8: Demo & Submission
 **Goal**: A polished hackathon submission package with a compelling demo video, clear documentation, and all DoraHacks artifacts -- the project is judge-ready
@@ -134,11 +134,11 @@ Plans:
   1. A demo video of 3 minutes or less shows the complete end-to-end flow: credential issuance, proof generation in browser, on-chain verification, and result querying -- with no cuts hiding errors
   2. The README includes a project overview, Mermaid architecture diagram, verified setup commands that work from a clean clone, and a deployment guide with Sepolia contract addresses
   3. The DoraHacks BUIDL submission is complete with project description, team info, Privacy track selection, GitHub repo link, demo video link, and deployed contract addresses
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 08-01: Demo video recording and README documentation
-- [ ] 08-02: DoraHacks BUIDL submission
+- [ ] 08-01-PLAN.md -- Create README.md with Mermaid architecture diagram, vercel.json with COOP/COEP headers, fix .gitignore, update Layout.tsx GitHub link
+- [ ] 08-02-PLAN.md -- Create demo video script and DoraHacks submission draft, guide user through recording, deployment, and submission
 
 ## Progress
 
