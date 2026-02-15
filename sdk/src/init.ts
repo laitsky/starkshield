@@ -5,10 +5,8 @@
  * Must be called before any circuit execution or proof generation.
  */
 
-import initNoirC from '@noir-lang/noirc_abi';
 import initACVM from '@noir-lang/acvm_js';
-import acvm from '@noir-lang/acvm_js/web/acvm_js_bg.wasm?url';
-import noirc from '@noir-lang/noirc_abi/web/noirc_abi_wasm_bg.wasm?url';
+import initNoirC from '@noir-lang/noirc_abi';
 
 let initialized = false;
 
@@ -18,6 +16,9 @@ let initialized = false;
  */
 export async function initWasm(): Promise<void> {
   if (initialized) return;
-  await Promise.all([initACVM(fetch(acvm)), initNoirC(fetch(noirc))]);
+  await Promise.all([
+    initACVM(fetch('/wasm/acvm_js_bg.wasm')),
+    initNoirC(fetch('/wasm/noirc_abi_wasm_bg.wasm')),
+  ]);
   initialized = true;
 }

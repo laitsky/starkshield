@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
+import path from 'path';
 
 export default defineConfig({
   plugins: [
@@ -18,6 +19,19 @@ export default defineConfig({
       },
     },
   ],
+  resolve: {
+    alias: {
+      '@noir-lang/acvm_js': path.resolve(
+        __dirname,
+        'node_modules/@noir-lang/acvm_js/web/acvm_js.js',
+      ),
+      '@noir-lang/noirc_abi': path.resolve(
+        __dirname,
+        'node_modules/@noir-lang/noirc_abi/web/noirc_abi_wasm.js',
+      ),
+      pino: path.resolve(__dirname, 'src/shims/pino.js'),
+    },
+  },
   optimizeDeps: {
     exclude: ['@aztec/bb.js'],
   },

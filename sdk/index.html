@@ -70,9 +70,9 @@
   <p class="subtitle">Client-side ZK proof generation via noir_js + bb.js WASM</p>
 
   <div class="controls">
-    <button id="btn-age" onclick="runAgeProof()">Generate Age Proof</button>
-    <button id="btn-membership" onclick="runMembershipProof()">Generate Membership Proof</button>
-    <button onclick="clearLog()">Clear Log</button>
+    <button id="btn-age">Generate Age Proof</button>
+    <button id="btn-membership">Generate Membership Proof</button>
+    <button id="btn-clear">Clear Log</button>
   </div>
 
   <pre id="output"></pre>
@@ -211,10 +211,10 @@
       }
     }
 
-    // Expose functions globally for button onclick handlers
-    window.runAgeProof = runAgeProof;
-    window.runMembershipProof = runMembershipProof;
-    window.clearLog = clearLog;
+    // Attach event listeners
+    document.getElementById('btn-age').addEventListener('click', runAgeProof);
+    document.getElementById('btn-membership').addEventListener('click', runMembershipProof);
+    document.getElementById('btn-clear').addEventListener('click', clearLog);
 
     // Log initialization status
     log('StarkShield Proof Engine SDK loaded');
