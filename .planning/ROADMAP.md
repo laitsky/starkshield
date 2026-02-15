@@ -119,12 +119,12 @@ Plans:
   3. The Verification Dashboard shows past verifications with truncated nullifier, attribute, timestamp, and clickable Starkscan transaction links
   4. Privacy callout annotations ("this data stays on your device") appear at credential loading, proof generation, and before submission
   5. The application works in Chrome, Firefox, and Safari with COOP/COEP headers configured, and shows actionable error messages for expired credentials, wrong network, insufficient gas, rejected transactions, WASM load failures, and missing wallet extensions
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 07-01: React SPA scaffold with COOP/COEP, wallet connect, and Credential Wallet view
-- [ ] 07-02: Proof Generator view with progress indicators and public output preview
-- [ ] 07-03: Verification Dashboard, privacy callouts, and error handling
+- [ ] 07-01-PLAN.md -- React SPA scaffold with React 19, Tailwind v4, wallet context, and Credential Wallet view (WEB-01)
+- [ ] 07-02-PLAN.md -- Proof Generator view with progress indicators, public output preview, and on-chain submission (WEB-02)
+- [ ] 07-03-PLAN.md -- Verification Dashboard, privacy callouts, and error handling (WEB-03, WEB-04, WEB-06)
 
 ### Phase 8: Demo & Submission
 **Goal**: A polished hackathon submission package with a compelling demo video, clear documentation, and all DoraHacks artifacts -- the project is judge-ready
