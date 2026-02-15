@@ -23,6 +23,20 @@ export {
   verifyProofLocally,
 } from './prover';
 
+// Wallet connection
+export { connectWallet, disconnectWallet, getWalletAccount } from './wallet';
+
+// Proof submission
+export { generateCalldata, submitProof } from './submitter';
+
+// Configuration
+export {
+  REGISTRY_ADDRESS,
+  SEPOLIA_RPC_URL,
+  CIRCUIT_IDS,
+  VK_PATHS,
+} from './config';
+
 // Types
 export type {
   CredentialJSON,
@@ -31,4 +45,8 @@ export type {
   AgeProofParams,
   MembershipProofParams,
   ValidationResult,
+  WalletState,
+  SubmitResult,
+  CalldataResult,
+  VerificationRecord,
 } from './types';

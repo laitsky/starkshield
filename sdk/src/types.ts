@@ -54,3 +54,33 @@ export interface ValidationResult {
   valid: boolean;
   errors: string[];
 }
+
+/** Connected wallet state */
+export interface WalletState {
+  address: string;
+  chainId: string;
+  connected: boolean;
+}
+
+/** Result from proof submission to on-chain registry */
+export interface SubmitResult {
+  transactionHash: string;
+  circuitId: number;
+  success: boolean;
+}
+
+/** Result from calldata generation */
+export interface CalldataResult {
+  calldata: bigint[];
+  circuitType: CircuitType;
+}
+
+/** Verification record from on-chain query */
+export interface VerificationRecord {
+  exists: boolean;
+  nullifier: bigint;
+  attributeKey: bigint;
+  thresholdOrSetHash: bigint;
+  timestamp: number;
+  circuitId: number;
+}
