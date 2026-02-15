@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StarkShield SDK - E2E Test</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
+      background: #0a0a0a;
+      color: #e0e0e0;
+      padding: 2rem;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    h1 {
+      color: #7c3aed;
+      margin-bottom: 0.5rem;
+      font-size: 1.5rem;
+    }
+    .subtitle {
+      color: #888;
+      margin-bottom: 2rem;
+      font-size: 0.9rem;
+    }
+    h2 {
+      color: #a78bfa;
+      margin: 1.5rem 0 0.75rem;
+      font-size: 1.1rem;
+      border-bottom: 1px solid #333;
+      padding-bottom: 0.25rem;
+    }
+    h2:first-of-type { margin-top: 0; }
+    .section {
+      margin-bottom: 1rem;
+    }
+    .controls {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    button {
+      padding: 0.6rem 1.2rem;
+      border: 1px solid #7c3aed;
+      background: #1a1a2e;
+      color: #c4b5fd;
+      font-size: 0.85rem;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    button:hover { background: #2d1b69; }
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    button.btn-wallet {
+      border-color: #10b981;
+      color: #6ee7b7;
+    }
+    button.btn-wallet:hover { background: #064e3b; }
+    button.btn-submit {
+      border-color: #f59e0b;
+      color: #fcd34d;
+    }
+    button.btn-submit:hover { background: #78350f; }
+    button.btn-query {
+      border-color: #3b82f6;
+      color: #93c5fd;
+    }
+    button.btn-query:hover { background: #1e3a5f; }
+    .wallet-status {
+      color: #888;
+      font-size: 0.85rem;
+      margin-left: 0.5rem;
+    }
+    .wallet-status.connected {
+      color: #6ee7b7;
+    }
+    input[type="text"] {
+      padding: 0.6rem 0.8rem;
+      border: 1px solid #3b82f6;
+      background: #111;
+      color: #e0e0e0;
+      font-size: 0.85rem;
+      border-radius: 4px;
+      font-family: monospace;
+      width: 360px;
+    }
+    input[type="text"]::placeholder {
+      color: #555;
+    }
+    #output {
+      background: #111;
+      border: 1px solid #333;
+      padding: 1rem;
+      border-radius: 4px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      min-height: 400px;
+      max-height: 80vh;
+      overflow-y: auto;
+      margin-top: 1rem;
+    }
+    .log-info { color: #93c5fd; }
+    .log-success { color: #86efac; }
+    .log-error { color: #fca5a5; }
+    .log-warn { color: #fde68a; }
+    .log-time { color: #c4b5fd; }
+  </style>
+</head>
+<body>
+  <h1>StarkShield SDK - E2E Test</h1>
+  <p class="subtitle">Wallet connection, ZK proof generation, on-chain submission, and verification querying</p>
+
+  <!-- Wallet Section -->
+  <div class="section">
+    <h2>Wallet</h2>
+    <div class="controls">
+      <button id="btn-connect" class="btn-wallet">Connect Wallet</button>
+      <button id="btn-disconnect" class="btn-wallet" disabled>Disconnect</button>
+      <span id="wallet-status" class="wallet-status">Not connected</span>
+    </div>
+  </div>
+
+  <!-- Proof Generation Section -->
+  <div class="section">
+    <h2>Proof Generation (local)</h2>
+    <div class="controls">
+      <button id="btn-age">Generate Age Proof</button>
+      <button id="btn-membership">Generate Membership Proof</button>
+    </div>
+  </div>
+
+  <!-- On-Chain Submission Section -->
+  <div class="section">
+    <h2>On-Chain Submission</h2>
+    <div class="controls">
+      <button id="btn-submit-age" class="btn-submit" disabled>Submit Age Proof On-Chain</button>
+      <button id="btn-submit-membership" class="btn-submit" disabled>Submit Membership Proof On-Chain</button>
+    </div>
+  </div>
+
+  <!-- Query Section -->
+  <div class="section">
+    <h2>Verification Query</h2>
+    <div class="controls">
+      <input id="nullifier-input" type="text" placeholder="Nullifier hex value (0x...)" />
+      <button id="btn-query" class="btn-query">Query Verification</button>
+    </div>
+  </div>
+
+  <!-- Log Output -->
+  <div class="controls">
+    <button id="btn-clear">Clear Log</button>
+  </div>
+  <pre id="output"></pre>
+
+  <script type="module">
+    import {
+      // WASM init
+      initWasm,
+      // Credential validation
+      validateAgeCredential,
+      validateMembershipCredential,
+      // Proof generation
+      generateAgeProof,
+      generateMembershipProof,
+      verifyProofLocally,
+      // Wallet connection (Plan 06-01)
+      connectWallet,
+      disconnectWallet,
+      // Proof submission (Plan 06-01)
+      generateCalldata,
+      submitProof,
+      // On-chain reader (Plan 06-02)
+      isNullifierUsed,
+      getVerificationRecord,
+      // Config
+      REGISTRY_ADDRESS,
+    } from './src/index.ts';
+
+    // --- DOM refs ---
+    const output = document.getElementById('output');
+    const btnConnect = document.getElementById('btn-connect');
+    const btnDisconnect = document.getElementById('btn-disconnect');
+    const walletStatusEl = document.getElementById('wallet-status');
+    const btnAge = document.getElementById('btn-age');
+    const btnMembership = document.getElementById('btn-membership');
+    const btnSubmitAge = document.getElementById('btn-submit-age');
+    const btnSubmitMembership = document.getElementById('btn-submit-membership');
+    const btnQuery = document.getElementById('btn-query');
+    const nullifierInput = document.getElementById('nullifier-input');
+    const btnClear = document.getElementById('btn-clear');
+
+    // --- State ---
+    let walletAccount = null;
+
+    // --- Logging ---
+    function log(msg, cls = 'log-info') {
+      const span = document.createElement('span');
+      span.className = cls;
+      span.textContent = `[${new Date().toLocaleTimeString()}] ${msg}\n`;
+      output.appendChild(span);
+      output.scrollTop = output.scrollHeight;
+    }
+
+    function clearLog() {
+      output.innerHTML = '';
+    }
+
+    function setProofButtons(disabled) {
+      btnAge.disabled = disabled;
+      btnMembership.disabled = disabled;
+    }
+
+    function setSubmitButtons(enabled) {
+      btnSubmitAge.disabled = !enabled;
+      btnSubmitMembership.disabled = !enabled;
+    }
+
+    function truncateAddress(addr) {
+      if (!addr || addr.length < 12) return addr;
+      return addr.substring(0, 6) + '...' + addr.substring(addr.length - 4);
+    }
+
+    // --- Wallet ---
+    async function handleConnect() {
+      try {
+        btnConnect.disabled = true;
+        log('Connecting wallet...', 'log-warn');
+        const result = await connectWallet();
+        walletAccount = result.walletAccount;
+        const addr = result.state.address;
+        walletStatusEl.textContent = `Connected: ${truncateAddress(addr)}`;
+        walletStatusEl.classList.add('connected');
+        btnDisconnect.disabled = false;
+        setSubmitButtons(true);
+        log(`Wallet connected: ${addr}`, 'log-success');
+        log(`Chain ID: ${result.state.chainId}`, 'log-time');
+      } catch (err) {
+        log(`Wallet connection failed: ${err.message}`, 'log-error');
+        btnConnect.disabled = false;
+      }
+    }
+
+    async function handleDisconnect() {
+      try {
+        await disconnectWallet();
+        walletAccount = null;
+        walletStatusEl.textContent = 'Not connected';
+        walletStatusEl.classList.remove('connected');
+        btnConnect.disabled = false;
+        btnDisconnect.disabled = true;
+        setSubmitButtons(false);
+        log('Wallet disconnected', 'log-info');
+      } catch (err) {
+        log(`Disconnect failed: ${err.message}`, 'log-error');
+      }
+    }
+
+    // --- Proof Generation ---
+    async function runAgeProof() {
+      setProofButtons(true);
+      try {
+        log('--- Age Verification Proof ---', 'log-warn');
+
+        log('Loading age credential...');
+        const resp = await fetch('/credentials/demo_credential.json');
+        if (!resp.ok) throw new Error(`Failed to fetch credential: ${resp.status}`);
+        const credential = await resp.json();
+        log(`Credential loaded: subject_id=${credential.subject_id.substring(0, 20)}...`);
+
+        log('Validating credential...');
+        const validation = validateAgeCredential(credential);
+        if (validation.valid) {
+          log('Credential is valid', 'log-success');
+        } else {
+          log(`Credential validation failed: ${validation.errors.join(', ')}`, 'log-error');
+          setProofButtons(false);
+          return;
+        }
+
+        log('Generating proof (this may take 10-30 seconds)...', 'log-warn');
+        const startTime = performance.now();
+        const proofResult = await generateAgeProof(credential, {
+          threshold: 18,
+          dappContextId: 42,
+        });
+        const totalTime = performance.now() - startTime;
+
+        log(`Proof generated!`, 'log-success');
+        log(`  Proof size: ${proofResult.proof.length} bytes`, 'log-time');
+        log(`  Public inputs: ${proofResult.publicInputs.length} fields`, 'log-time');
+        log(`  Proving time (backend only): ${proofResult.provingTimeMs.toFixed(0)}ms`, 'log-time');
+        log(`  Total time (incl. witness): ${totalTime.toFixed(0)}ms`, 'log-time');
+
+        log('Verifying proof locally...');
+        const isValid = await verifyProofLocally('age_verify', proofResult);
+        if (isValid) {
+          log('Proof verified locally: VALID', 'log-success');
+        } else {
+          log('Proof verified locally: INVALID', 'log-error');
+        }
+
+        log('--- Age proof complete ---\n', 'log-warn');
+      } catch (err) {
+        log(`ERROR: ${err.message}`, 'log-error');
+        if (err.stack) log(err.stack, 'log-error');
+      } finally {
+        setProofButtons(false);
+      }
+    }
+
+    async function runMembershipProof() {
+      setProofButtons(true);
+      try {
+        log('--- Membership Verification Proof ---', 'log-warn');
+
+        log('Loading membership credential...');
+        const resp = await fetch('/credentials/demo_credential_membership.json');
+        if (!resp.ok) throw new Error(`Failed to fetch credential: ${resp.status}`);
+        const credential = await resp.json();
+        log(`Credential loaded: subject_id=${credential.subject_id.substring(0, 20)}...`);
+
+        log('Validating credential...');
+        const validation = validateMembershipCredential(credential);
+        if (validation.valid) {
+          log('Credential is valid', 'log-success');
+        } else {
+          log(`Credential validation failed: ${validation.errors.join(', ')}`, 'log-error');
+          setProofButtons(false);
+          return;
+        }
+
+        // 0x64 = 100 decimal = the attribute_value in the demo membership credential
+        log('Generating proof (this may take 10-30 seconds)...', 'log-warn');
+        const startTime = performance.now();
+        const proofResult = await generateMembershipProof(credential, {
+          allowedSet: ['0x64', '0x65', '0x66'],
+          dappContextId: 42,
+        });
+        const totalTime = performance.now() - startTime;
+
+        log(`Proof generated!`, 'log-success');
+        log(`  Proof size: ${proofResult.proof.length} bytes`, 'log-time');
+        log(`  Public inputs: ${proofResult.publicInputs.length} fields`, 'log-time');
+        log(`  Proving time (backend only): ${proofResult.provingTimeMs.toFixed(0)}ms`, 'log-time');
+        log(`  Total time (incl. witness): ${totalTime.toFixed(0)}ms`, 'log-time');
+
+        log('Verifying proof locally...');
+        const isValid = await verifyProofLocally('membership_proof', proofResult);
+        if (isValid) {
+          log('Proof verified locally: VALID', 'log-success');
+        } else {
+          log('Proof verified locally: INVALID', 'log-error');
+        }
+
+        log('--- Membership proof complete ---\n', 'log-warn');
+      } catch (err) {
+        log(`ERROR: ${err.message}`, 'log-error');
+        if (err.stack) log(err.stack, 'log-error');
+      } finally {
+        setProofButtons(false);
+      }
+    }
+
+    // --- On-Chain Submission ---
+    // Nullifier index in publicInputs:
+    //   age_verify: index 5 (9 public inputs total)
+    //   membership_proof: index 12 (16 public inputs total)
+
+    async function submitAgeProofOnChain() {
+      if (!walletAccount) {
+        log('Connect wallet first', 'log-error');
+        return;
+      }
+      setProofButtons(true);
+      setSubmitButtons(false);
+      try {
+        log('=== Submit Age Proof On-Chain ===', 'log-warn');
+
+        // Step 1: Generate proof
+        log('Loading age credential...');
+        const resp = await fetch('/credentials/demo_credential.json');
+        if (!resp.ok) throw new Error(`Failed to fetch credential: ${resp.status}`);
+        const credential = await resp.json();
+
+        log('Generating age proof...', 'log-warn');
+        const proofResult = await generateAgeProof(credential, {
+          threshold: 18,
+          dappContextId: 42,
+        });
+        log(`Proof generated (${proofResult.proof.length} bytes, ${proofResult.publicInputs.length} inputs)`, 'log-success');
+
+        // Step 2: Generate calldata
+        log('Generating garaga calldata...');
+        const calldataResult = await generateCalldata(proofResult, 'age_verify');
+        log(`Calldata generated: ${calldataResult.calldata.length} felt252 elements`, 'log-success');
+
+        // Step 3: Submit to chain
+        log('Submitting to StarkShieldRegistry (wallet will prompt for signature)...', 'log-warn');
+        const submitResult = await submitProof(walletAccount, calldataResult);
+        log(`Transaction submitted: ${submitResult.transactionHash}`, 'log-success');
+        log(`Circuit ID: ${submitResult.circuitId} (age_verify)`, 'log-time');
+
+        // Step 4: Query verification status using nullifier
+        const nullifier = proofResult.publicInputs[5]; // age_verify nullifier at index 5
+        log(`Querying verification for nullifier: ${nullifier}...`);
+        nullifierInput.value = nullifier;
+        const record = await getVerificationRecord(nullifier);
+        displayVerificationRecord(record);
+
+        log('=== Age proof submission complete ===\n', 'log-warn');
+      } catch (err) {
+        log(`ERROR: ${err.message}`, 'log-error');
+        if (err.stack) log(err.stack, 'log-error');
+      } finally {
+        setProofButtons(false);
+        if (walletAccount) setSubmitButtons(true);
+      }
+    }
+
+    async function submitMembershipProofOnChain() {
+      if (!walletAccount) {
+        log('Connect wallet first', 'log-error');
+        return;
+      }
+      setProofButtons(true);
+      setSubmitButtons(false);
+      try {
+        log('=== Submit Membership Proof On-Chain ===', 'log-warn');
+
+        // Step 1: Generate proof
+        log('Loading membership credential...');
+        const resp = await fetch('/credentials/demo_credential_membership.json');
+        if (!resp.ok) throw new Error(`Failed to fetch credential: ${resp.status}`);
+        const credential = await resp.json();
+
+        log('Generating membership proof...', 'log-warn');
+        const proofResult = await generateMembershipProof(credential, {
+          allowedSet: ['0x64', '0x65', '0x66'],
+          dappContextId: 42,
+        });
+        log(`Proof generated (${proofResult.proof.length} bytes, ${proofResult.publicInputs.length} inputs)`, 'log-success');
+
+        // Step 2: Generate calldata
+        log('Generating garaga calldata...');
+        const calldataResult = await generateCalldata(proofResult, 'membership_proof');
+        log(`Calldata generated: ${calldataResult.calldata.length} felt252 elements`, 'log-success');
+
+        // Step 3: Submit to chain
+        log('Submitting to StarkShieldRegistry (wallet will prompt for signature)...', 'log-warn');
+        const submitResult = await submitProof(walletAccount, calldataResult);
+        log(`Transaction submitted: ${submitResult.transactionHash}`, 'log-success');
+        log(`Circuit ID: ${submitResult.circuitId} (membership_proof)`, 'log-time');
+
+        // Step 4: Query verification status using nullifier
+        const nullifier = proofResult.publicInputs[12]; // membership_proof nullifier at index 12
+        log(`Querying verification for nullifier: ${nullifier}...`);
+        nullifierInput.value = nullifier;
+        const record = await getVerificationRecord(nullifier);
+        displayVerificationRecord(record);
+
+        log('=== Membership proof submission complete ===\n', 'log-warn');
+      } catch (err) {
+        log(`ERROR: ${err.message}`, 'log-error');
+        if (err.stack) log(err.stack, 'log-error');
+      } finally {
+        setProofButtons(false);
+        if (walletAccount) setSubmitButtons(true);
+      }
+    }
+
+    // --- Verification Query ---
+    async function queryVerification() {
+      const nullifier = nullifierInput.value.trim();
+      if (!nullifier) {
+        log('Enter a nullifier hex value', 'log-error');
+        return;
+      }
+      try {
+        log(`--- Query Verification Record ---`, 'log-warn');
+        log(`Nullifier: ${nullifier}`);
+        log(`Registry: ${REGISTRY_ADDRESS}`, 'log-time');
+
+        const record = await getVerificationRecord(nullifier);
+        displayVerificationRecord(record);
+
+        log('--- Query complete ---\n', 'log-warn');
+      } catch (err) {
+        log(`Query failed: ${err.message}`, 'log-error');
+        if (err.stack) log(err.stack, 'log-error');
+      }
+    }
+
+    function displayVerificationRecord(record) {
+      if (!record.exists) {
+        log('  Status: NOT FOUND (nullifier not used)', 'log-warn');
+        return;
+      }
+      log('  Status: VERIFIED', 'log-success');
+      log(`  Nullifier: 0x${record.nullifier.toString(16)}`, 'log-time');
+      log(`  Attribute Key: 0x${record.attributeKey.toString(16)}`, 'log-time');
+      log(`  Threshold/Set Hash: 0x${record.thresholdOrSetHash.toString(16)}`, 'log-time');
+      log(`  Timestamp: ${record.timestamp} (${new Date(record.timestamp * 1000).toISOString()})`, 'log-time');
+      const circuitName = record.circuitId === 0 ? 'age_verify' : record.circuitId === 1 ? 'membership_proof' : `unknown(${record.circuitId})`;
+      log(`  Circuit: ${circuitName} (id=${record.circuitId})`, 'log-time');
+    }
+
+    // --- Event Listeners ---
+    btnConnect.addEventListener('click', handleConnect);
+    btnDisconnect.addEventListener('click', handleDisconnect);
+    btnAge.addEventListener('click', runAgeProof);
+    btnMembership.addEventListener('click', runMembershipProof);
+    btnSubmitAge.addEventListener('click', submitAgeProofOnChain);
+    btnSubmitMembership.addEventListener('click', submitMembershipProofOnChain);
+    btnQuery.addEventListener('click', queryVerification);
+    btnClear.addEventListener('click', clearLog);
+
+    // --- Init ---
+    log('StarkShield SDK loaded');
+    log('Connect a wallet to enable on-chain submission');
+    log('Click a proof button to generate a ZK proof locally');
+  </script>
+</body>
+</html>

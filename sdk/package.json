@@ -12,9 +12,15 @@
     "@noir-lang/noir_js": "1.0.0-beta.16",
     "@starknet-io/get-starknet": "^4.0.8",
     "garaga": "1.0.1",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-router-dom": "^7.13.0",
     "starknet": "^8.9.2"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.1.18",
+    "@vitejs/plugin-react": "^5.1.4",
+    "tailwindcss": "^4.1.18",
     "typescript": "^5.0.0",
     "vite": "^6.0.0",
     "vite-plugin-node-polyfills": "0.25.0"
