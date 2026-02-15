@@ -29,6 +29,9 @@ export { connectWallet, disconnectWallet, getWalletAccount } from './wallet';
 // Proof submission
 export { generateCalldata, submitProof } from './submitter';
 
+// On-chain verification queries
+export { isNullifierUsed, getVerificationRecord } from './reader';
+
 // Configuration
 export {
   REGISTRY_ADDRESS,
