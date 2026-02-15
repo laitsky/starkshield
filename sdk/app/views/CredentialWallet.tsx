@@ -5,6 +5,7 @@ import {
   validateMembershipCredential,
 } from '../../src/index';
 import type { CredentialJSON, ValidationResult } from '../../src/index';
+import PrivacyCallout from '../components/PrivacyCallout';
 
 interface LoadedCredential {
   credential: CredentialJSON;
@@ -162,10 +163,7 @@ export default function CredentialWallet() {
         </div>
       )}
 
-      <div className="flex items-start gap-2 rounded-lg border border-green-700/40 bg-green-950/30 px-4 py-3 text-sm text-green-300">
-        <span className="mt-0.5 shrink-0" aria-hidden="true">&#128274;</span>
-        <span>Your credential data stays on your device. It is never uploaded to any server.</span>
-      </div>
+      <PrivacyCallout context="credential" />
 
       {credentials.length === 0 && !loading && (
         <div className="py-10 text-center text-gray-500">

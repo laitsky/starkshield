@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useProofGeneration } from '../hooks/useProofGeneration';
 import type { PublicOutputs } from '../hooks/useProofGeneration';
 import ProofProgress from '../components/ProofProgress';
+import PrivacyCallout from '../components/PrivacyCallout';
+import ErrorBanner from '../components/ErrorBanner';
 import { useWallet } from '../hooks/useWallet';
 import type {
   CredentialJSON,
@@ -24,89 +26,6 @@ function determineCircuitType(credential: CredentialJSON): CircuitType {
   return BigInt(credential.credential_type) === 0n
     ? 'age_verify'
     : 'membership_proof';
-}
-
-// ---------------------------------------------------------------------------
-// Error classifier (inline; full ErrorBanner built in 07-03)
-// ---------------------------------------------------------------------------
-
-interface ErrorInfo {
-  title: string;
-  message: string;
-  action: string;
-}
-
-function classifyError(error: string): ErrorInfo {
-  if (error.includes('expired') || error.includes('expir')) {
-    return {
-      title: 'Credential Expired',
-      message: 'This credential has passed its expiration date.',
-      action: 'Request a new credential from the issuer.',
-    };
-  }
-  if (
-    error.includes('network') ||
-    error.includes('chain') ||
-    error.includes('SN_SEPOLIA')
-  ) {
-    return {
-      title: 'Wrong Network',
-      message: 'Your wallet is connected to the wrong network.',
-      action: 'Switch your wallet to Starknet Sepolia in your wallet settings.',
-    };
-  }
-  if (
-    error.includes('gas') ||
-    error.includes('fee') ||
-    error.includes('insufficient')
-  ) {
-    return {
-      title: 'Insufficient Gas',
-      message:
-        'Your account does not have enough STRK/ETH for this transaction.',
-      action: 'Add funds to your Sepolia wallet via a faucet.',
-    };
-  }
-  if (
-    error.includes('rejected') ||
-    error.includes('User abort') ||
-    error.includes('cancel')
-  ) {
-    return {
-      title: 'Transaction Rejected',
-      message: 'You declined the transaction in your wallet.',
-      action: 'Try again and approve the transaction when prompted.',
-    };
-  }
-  if (
-    error.includes('wasm') ||
-    error.includes('WASM') ||
-    error.includes('WebAssembly')
-  ) {
-    return {
-      title: 'WASM Load Failure',
-      message: 'The proof engine failed to initialize.',
-      action:
-        'Try refreshing the page. Ensure you are using a modern browser (Chrome, Firefox, Safari).',
-    };
-  }
-  if (
-    error.includes('wallet') ||
-    error.includes('No wallet') ||
-    error.includes('not installed')
-  ) {
-    return {
-      title: 'Wallet Not Found',
-      message: 'No compatible wallet extension was detected.',
-      action:
-        'Install ArgentX or Braavos wallet extension and refresh the page.',
-    };
-  }
-  return {
-    title: 'Error',
-    message: error,
-    action: 'Try again. If the problem persists, refresh the page.',
-  };
 }
 
 // ---------------------------------------------------------------------------
@@ -268,16 +187,7 @@ function OutputPreview({ outputs }: { outputs: PublicOutputs }) {
         </div>
       </div>
 
-      {/* Privacy callout (inline; PrivacyCallout component built in 07-03) */}
-      <div className="flex items-start gap-2 rounded-lg border border-green-700/40 bg-green-950/30 px-4 py-3 text-sm text-green-300">
-        <span className="mt-0.5 shrink-0" aria-hidden="true">
-          &#128274;
-        </span>
-        <span>
-          Only these public outputs go on-chain. Your credential data stays on
-          your device.
-        </span>
-      </div>
+      <PrivacyCallout context="submission" />
     </div>
   );
 }
@@ -288,6 +198,7 @@ function OutputPreview({ outputs }: { outputs: PublicOutputs }) {
 
 export default function ProofGenerator() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { walletAccount } = useWallet();
 
   const {
@@ -601,6 +512,8 @@ export default function ProofGenerator() {
             </div>
           )}
 
+          <PrivacyCallout context="proof" />
+
           <button
             onClick={handleGenerateProof}
             disabled={!credential || isGenerating}
@@ -691,30 +604,27 @@ export default function ProofGenerator() {
             )}
           </div>
 
-          <button
-            onClick={handleReset}
-            className="w-full rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-violet-500"
-          >
-            Generate Another Proof
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={handleReset}
+              className="flex-1 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-violet-500"
+            >
+              Generate Another Proof
+            </button>
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="rounded-lg border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-gray-400 transition hover:text-gray-200"
+            >
+              View Dashboard
+            </button>
+          </div>
         </div>
       )}
 
       {/* Section 6: Error */}
       {step === 'error' && error && (
         <div className="space-y-4">
-          <div className="rounded-xl border border-red-700/40 bg-red-950/20 p-6 space-y-3">
-            {(() => {
-              const info = classifyError(error);
-              return (
-                <>
-                  <h3 className="font-medium text-red-300">{info.title}</h3>
-                  <p className="text-sm text-red-300/80">{info.message}</p>
-                  <p className="text-sm text-gray-400">{info.action}</p>
-                </>
-              );
-            })()}
-          </div>
+          <ErrorBanner error={error} onDismiss={handleReset} />
           <button
             onClick={handleReset}
             className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-gray-300 transition hover:border-gray-600 hover:text-gray-100"
