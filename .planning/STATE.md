@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Users can prove who they are without revealing who they are -- private credential verification that is fully on-chain, composable, and trust-minimized.
-**Current focus:** Phase 5 - Proof Engine SDK (VERIFIED -- browser proofs working)
+**Current focus:** Phase 6 - Wallet & Chain SDK (Plan 01 complete, Plan 02 remaining)
 
 ## Current Position
 
-Phase: 5 of 8 (Proof Engine SDK) -- VERIFIED
-Plan: 1 of 1 in current phase (complete + verified)
-Status: Phase 05 verified, ready for Phase 06
-Last activity: 2026-02-15 -- Browser runtime fixes applied, both age + membership proofs verified in Chrome
+Phase: 6 of 8 (Wallet & Chain SDK)
+Plan: 1 of 2 in current phase (complete)
+Status: Plan 06-01 complete -- wallet connection + proof submission modules built
+Last activity: 2026-02-15 -- Wallet and chain SDK modules created, TypeScript compiles clean
 
-Progress: [███████░░░] 70%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
-- Average duration: 41min
-- Total execution time: 4.8 hours
+- Total plans completed: 8
+- Average duration: 37min
+- Total execution time: 4.9 hours
 
 **By Phase:**
 
@@ -32,9 +32,10 @@ Progress: [███████░░░] 70%
 | 03 | 1/1 | 4min | 4min |
 | 04 | 2/2 | 37min | 19min |
 | 05 | 1/1 | 5min | 5min |
+| 06 | 1/2 | 4min | 4min |
 
 **Recent Trend:**
-- Last 5 plans: 4min, 4min, 25min, 12min, 5min
+- Last 5 plans: 4min, 25min, 12min, 5min, 4min
 - Trend: stable
 
 *Updated after each plan completion*
@@ -82,6 +83,9 @@ Recent decisions affecting current work:
 - [05-01]: @noir-lang/acvm_js and noirc_abi need Vite resolve.alias to /web/ entry points (packages default to Node.js)
 - [05-01]: WASM binaries must be served from public/wasm/ (Vite alias conflicts with ?url imports)
 - [05-01]: pino needs ESM shim -- bb.js does `import { pino }` but pino/browser.js is CJS default export
+- [06-01]: COEP changed from require-corp to credentialless for wallet modal cross-origin compatibility
+- [06-01]: Inline flattenPublicInputs instead of importing flattenFieldsAsArray (not re-exported from bb.js top-level)
+- [06-01]: Type assertion (as any) for get-starknet -> WalletAccount.connect due to differing StarknetWindowObject type packages
 
 ### Pending Todos
 
@@ -97,5 +101,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-15
-Stopped at: Phase 05 verified -- browser proofs working for both circuits
-Resume file: .planning/phases/05-proof-engine-sdk/05-VERIFICATION.md
+Stopped at: Completed 06-01-PLAN.md -- wallet + proof submission modules
+Resume file: .planning/phases/06-wallet-chain-sdk/06-01-SUMMARY.md
