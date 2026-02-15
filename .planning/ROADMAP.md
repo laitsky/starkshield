@@ -103,11 +103,11 @@ Plans:
   1. Users can connect ArgentX or Braavos wallet via the SDK and the connected account address is available for transaction signing
   2. A generated proof can be submitted to StarkShieldRegistry via a formatted transaction, and the SDK returns the transaction hash upon acceptance
   3. The SDK can query on-chain verification status by nullifier and return whether a verification exists, its attribute key, threshold, and timestamp
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 06-01: Wallet connection and proof submission via starknet.js v8
-- [ ] 06-02: Verification status querying and calldata formatting
+- [ ] 06-01-PLAN.md -- Install starknet.js v8 + get-starknet v4, create config/wallet/submitter modules, bundle VK assets, enable wallet connection and proof submission
+- [ ] 06-02-PLAN.md -- Build on-chain reader module for verification status querying, update E2E test page with full wallet-to-chain flow
 
 ### Phase 7: Web Application
 **Goal**: A complete React SPA where users can view their credentials, generate and submit proofs, review past verifications, and understand exactly what data stays private -- the full user-facing product
