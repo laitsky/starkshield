@@ -5,7 +5,7 @@
 See: .planning/PROJECT.md (updated 2026-02-14)
 
 **Core value:** Users can prove who they are without revealing who they are -- private credential verification that is fully on-chain, composable, and trust-minimized.
-**Current focus:** Phase 7 in progress -- Web Application (React SPA)
+**Current focus:** Phase 7 complete -- Ready for Phase 8
 
 ## Current Position
 
