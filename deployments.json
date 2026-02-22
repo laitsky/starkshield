@@ -1,26 +1,26 @@
 {
   "network": "sepolia",
   "age_verifier": {
-    "class_hash": "0x7486ff3cb7c7db4ce5b62de993f204aeec12fd37bca734f1046eba6f9a8f629",
-    "contract_address": "0x9afed88f1d6bb0da51d98d29a3aaca31ed7ca99dc51a3df06931c543694f52"
+    "class_hash": "0x3705843c133665fa41f7efa23407dc65d8ad887c8c3522769fdad673d89001b",
+    "contract_address": "0x06e318af5da0aecca732fd0192305f4f755582f762186aa2b253e0d43d031023"
   },
   "membership_verifier": {
-    "class_hash": "0x69664e6f8e2e6c62985225357b7f14068237b3b171cf9aaf942aeff3f426ef9",
-    "contract_address": "0x483b48c3dbd32ebbc45b22a2a419c9a95c3999b103f5eb4a3048a0e8000d1da"
+    "class_hash": "0x33d0b53915cea953cfd47fb07c1342b29a9673ecc198fe5c606d375cddf1619",
+    "contract_address": "0x0209c45d1040f0e0c6893ffacc390c2734dd61b03619b50ad9888dbe8311fe17"
   },
   "registry": {
-    "class_hash": "0x766599e83fe0cdcfc9895b4413da9b9ff977b81881c0f78ffb81f875dd19613",
-    "contract_address": "0x054ca264033ae3b5874574c84de9c6086d94a66fb65445e455a8cef3137b7fab"
+    "class_hash": "0xd344a8a6ffef5ab26d54bb02a548365919ccf891f7948726da9b7f797f9281",
+    "contract_address": "0x06f4c3158eca3a5109e3b08355bd160e621eee291a9860ba716199c5e8f86f94"
   },
   "trusted_issuers": {
-    "age_demo_issuer_pub_key_x": "0x16e4953b04718a75e6b87b08bdcb3b4e7960e84604ac408c4dab76aff702a86f",
-    "membership_demo_issuer_pub_key_x": "0x0cf1cf3605ab9a87c812119274fafb6f06d0fe6258288b089c1b6f54c3c79e10"
+    "age_demo_issuer_pub_key_x": "0x2a03cf1ee0426f2809286a0a1b81228d7ceedc03c50f6be1390fd1686909bd35",
+    "membership_demo_issuer_pub_key_x": "0x299647e668cebfe7816dabb3f29b9ad017aa17d67ddcaacf48c45d3445d8bdf3"
   },
   "transactions": {
-    "registry_declaration": "0x291cd26cc938ccbb41083fbda531bcc308ea38e064532d24d7afb461f818b13",
-    "registry_deployment": "0x005dd7fb3322a9c4683d725b98687da9c799a268d44cbf965ea2553b6f2b0a24",
-    "add_age_issuer": "0x04c62eacb6379a3297888a61a8fac0f44727c7950b15f82bb7f834e543d22d06",
-    "add_membership_issuer": "0x03b6562726fc9122324a88d553120c7efcb5f96815bf6e748a0969bcb6da520b",
-    "verify_and_register_age": "0x00556479e6a2c1edafc3e8aad71fc020519cb0252576894ca37f5b1091116958"
+    "age_verifier_deployment": "deployed via garaga deploy --salt 2",
+    "membership_verifier_deployment": "deployed via garaga deploy --salt 2",
+    "registry_deployment": "0x01ce678ef7320125f445a835c4dc50afc3a5ae5697e7f858ade697af0218437d",
+    "add_age_issuer": "0x049336a194c015a4ee308fc9b0a60a33a54f41effd7b97f82904f673cc293c70",
+    "add_membership_issuer": "0x07fbdf947a38bac53fa102ce1664a79de0e6420d9bf70909b0707a8b3c71ce4b"
   }
 }
