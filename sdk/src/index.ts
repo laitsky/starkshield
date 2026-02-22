@@ -35,9 +35,12 @@ export { isNullifierUsed, getVerificationRecord } from './reader';
 // Configuration
 export {
   REGISTRY_ADDRESS,
+  SEPOLIA_CHAIN_ID,
   SEPOLIA_RPC_URL,
   CIRCUIT_IDS,
   VK_PATHS,
+  isSepoliaChainId,
+  resolvePublicAsset,
 } from './config';
 
 // Types

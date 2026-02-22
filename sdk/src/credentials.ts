@@ -40,63 +40,104 @@ const HEX_FIELDS = [
   'issuer_pub_key_y',
 ] as const;
 
-/**
- * Validate a credential JSON for age verification circuit compatibility.
- * Checks all required fields, signature format, hex prefixes, and credential_type = 0.
- */
-export function validateAgeCredential(cred: CredentialJSON): ValidationResult {
-  const errors: string[] = [];
+function validateSignature(signature: unknown, errors: string[]): void {
+  if (signature === undefined || signature === null) {
+    errors.push('Signature is required');
+    return;
+  }
+  if (!Array.isArray(signature)) {
+    errors.push('Signature must be an array');
+    return;
+  }
+  if (signature.length !== 64) {
+    errors.push(`Signature must be 64 bytes, got ${signature.length}`);
+  }
 
-  // Check required fields
+  for (let i = 0; i < signature.length; i++) {
+    const value = signature[i];
+    if (
+      typeof value !== 'number' ||
+      !Number.isInteger(value) ||
+      value < 0 ||
+      value > 255
+    ) {
+      errors.push(`Signature byte ${i} out of range: ${String(value)}`);
+    }
+  }
+}
+
+function validateHexFields(cred: CredentialJSON, errors: string[]): void {
+  for (const field of HEX_FIELDS) {
+    const val = cred[field as keyof CredentialJSON] as unknown;
+    if (typeof val !== 'string') continue;
+
+    if (!val.startsWith('0x')) {
+      errors.push(`${field} must start with 0x, got: ${val.substring(0, 10)}`);
+      continue;
+    }
+
+    try {
+      BigInt(val);
+    } catch {
+      errors.push(`${field} is not valid hex: ${val}`);
+    }
+  }
+}
+
+function parseCredentialField(
+  cred: CredentialJSON,
+  field: keyof CredentialJSON,
+): bigint | null {
+  const raw = cred[field] as unknown;
+  if (typeof raw !== 'string' || raw.length === 0) return null;
+
+  try {
+    return BigInt(raw);
+  } catch {
+    return null;
+  }
+}
+
+function validateCommonCredential(
+  cred: CredentialJSON,
+  errors: string[],
+): void {
   for (const field of REQUIRED_FIELDS) {
     if (!(field in cred) || cred[field as keyof CredentialJSON] === undefined) {
       errors.push(`Missing field: ${field}`);
     }
   }
 
-  // Validate signature is array of exactly 64 numbers, each 0-255
-  if (cred.signature) {
-    if (!Array.isArray(cred.signature)) {
-      errors.push('Signature must be an array');
-    } else {
-      if (cred.signature.length !== 64) {
-        errors.push(
-          `Signature must be 64 bytes, got ${cred.signature.length}`,
-        );
-      }
-      for (let i = 0; i < cred.signature.length; i++) {
-        if (
-          typeof cred.signature[i] !== 'number' ||
-          cred.signature[i] < 0 ||
-          cred.signature[i] > 255
-        ) {
-          errors.push(`Signature byte ${i} out of range: ${cred.signature[i]}`);
-        }
-      }
-    }
+  validateSignature(cred.signature, errors);
+  validateHexFields(cred, errors);
+}
+
+/**
+ * Validate a credential JSON for age verification circuit compatibility.
+ * Checks all required fields, signature format, hex prefixes, and credential_type = 0.
+ */
+export function validateAgeCredential(cred: CredentialJSON): ValidationResult {
+  const errors: string[] = [];
+  validateCommonCredential(cred, errors);
+
+  const credentialType = parseCredentialField(cred, 'credential_type');
+  if (credentialType === null) {
+    errors.push(`Invalid credential_type format: ${cred.credential_type}`);
+  } else if (credentialType !== 0n) {
+    errors.push(`Expected credential_type 0 (age), got ${cred.credential_type}`);
   }
 
-  // Validate hex fields start with "0x"
-  for (const field of HEX_FIELDS) {
-    const val = cred[field as keyof CredentialJSON] as string | undefined;
-    if (val && typeof val === 'string' && !val.startsWith('0x')) {
-      errors.push(`${field} must start with 0x, got: ${val.substring(0, 10)}`);
-    }
+  const attributeKey = parseCredentialField(cred, 'attribute_key');
+  if (attributeKey === null) {
+    errors.push(`Invalid attribute_key format: ${cred.attribute_key}`);
+  } else if (attributeKey !== 1n) {
+    errors.push(`Expected attribute_key 1 (age), got ${cred.attribute_key}`);
   }
 
-  // Validate credential_type is 0 (age type)
-  if (cred.credential_type) {
-    try {
-      if (BigInt(cred.credential_type) !== 0n) {
-        errors.push(
-          `Expected credential_type 0 (age), got ${cred.credential_type}`,
-        );
-      }
-    } catch {
-      errors.push(
-        `Invalid credential_type format: ${cred.credential_type}`,
-      );
-    }
+  const issuerId = parseCredentialField(cred, 'issuer_id');
+  const issuerPubKeyX = parseCredentialField(cred, 'issuer_pub_key_x');
+  if (issuerId !== null && issuerPubKeyX !== null && issuerId !== issuerPubKeyX) {
+    errors.push('issuer_id must match issuer_pub_key_x');
   }
 
   return { valid: errors.length === 0, errors };
@@ -110,57 +151,30 @@ export function validateMembershipCredential(
   cred: CredentialJSON,
 ): ValidationResult {
   const errors: string[] = [];
+  validateCommonCredential(cred, errors);
 
-  // Check required fields
-  for (const field of REQUIRED_FIELDS) {
-    if (!(field in cred) || cred[field as keyof CredentialJSON] === undefined) {
-      errors.push(`Missing field: ${field}`);
-    }
+  const credentialType = parseCredentialField(cred, 'credential_type');
+  if (credentialType === null) {
+    errors.push(`Invalid credential_type format: ${cred.credential_type}`);
+  } else if (credentialType !== 1n) {
+    errors.push(
+      `Expected credential_type 1 (membership), got ${cred.credential_type}`,
+    );
   }
 
-  // Validate signature is array of exactly 64 numbers, each 0-255
-  if (cred.signature) {
-    if (!Array.isArray(cred.signature)) {
-      errors.push('Signature must be an array');
-    } else {
-      if (cred.signature.length !== 64) {
-        errors.push(
-          `Signature must be 64 bytes, got ${cred.signature.length}`,
-        );
-      }
-      for (let i = 0; i < cred.signature.length; i++) {
-        if (
-          typeof cred.signature[i] !== 'number' ||
-          cred.signature[i] < 0 ||
-          cred.signature[i] > 255
-        ) {
-          errors.push(`Signature byte ${i} out of range: ${cred.signature[i]}`);
-        }
-      }
-    }
+  const attributeKey = parseCredentialField(cred, 'attribute_key');
+  if (attributeKey === null) {
+    errors.push(`Invalid attribute_key format: ${cred.attribute_key}`);
+  } else if (attributeKey !== 2n) {
+    errors.push(
+      `Expected attribute_key 2 (membership), got ${cred.attribute_key}`,
+    );
   }
 
-  // Validate hex fields start with "0x"
-  for (const field of HEX_FIELDS) {
-    const val = cred[field as keyof CredentialJSON] as string | undefined;
-    if (val && typeof val === 'string' && !val.startsWith('0x')) {
-      errors.push(`${field} must start with 0x, got: ${val.substring(0, 10)}`);
-    }
-  }
-
-  // Validate credential_type is 1 (membership type)
-  if (cred.credential_type) {
-    try {
-      if (BigInt(cred.credential_type) !== 1n) {
-        errors.push(
-          `Expected credential_type 1 (membership), got ${cred.credential_type}`,
-        );
-      }
-    } catch {
-      errors.push(
-        `Invalid credential_type format: ${cred.credential_type}`,
-      );
-    }
+  const issuerId = parseCredentialField(cred, 'issuer_id');
+  const issuerPubKeyX = parseCredentialField(cred, 'issuer_pub_key_x');
+  if (issuerId !== null && issuerPubKeyX !== null && issuerId !== issuerPubKeyX) {
+    errors.push('issuer_id must match issuer_pub_key_x');
   }
 
   return { valid: errors.length === 0, errors };

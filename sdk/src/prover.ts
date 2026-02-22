@@ -32,6 +32,7 @@ export async function generateAgeProof(
   credential: CredentialJSON,
   params: AgeProofParams,
 ): Promise<ProofResult> {
+  let backend: UltraHonkBackend | null = null;
   try {
     // Ensure WASM is loaded before any noir_js operations
     await initWasm();
@@ -42,16 +43,11 @@ export async function generateAgeProof(
     const noir = new Noir(ageCircuit as any);
     const { witness } = await noir.execute(inputs);
 
-    // Generate proof with keccak hash (Garaga compatibility)
-    // NOTE: Use { keccak: true } per Phase 4 CLI validation.
-    // If on-chain verification fails later (Phase 6), switch to { keccakZK: true }.
-    const backend = new UltraHonkBackend(ageCircuit.bytecode);
+    // Generate proof with keccak transcript (Garaga-compatible verifier artifacts).
+    backend = new UltraHonkBackend(ageCircuit.bytecode);
     const startTime = performance.now();
-    const proof = await backend.generateProof(witness, { keccak: true });
+    const proof = await backend.generateProof(witness, { keccakZK: true });
     const provingTimeMs = performance.now() - startTime;
-
-    // Cleanup WASM resources
-    await backend.destroy();
 
     return {
       proof: proof.proof,
@@ -62,6 +58,14 @@ export async function generateAgeProof(
     const message =
       error instanceof Error ? error.message : String(error);
     throw new Error(`Age proof generation failed: ${message}`);
+  } finally {
+    if (backend) {
+      try {
+        await backend.destroy();
+      } catch {
+        // Do not mask proof-generation errors with cleanup failures.
+      }
+    }
   }
 }
 
@@ -76,6 +80,7 @@ export async function generateMembershipProof(
   credential: CredentialJSON,
   params: MembershipProofParams,
 ): Promise<ProofResult> {
+  let backend: UltraHonkBackend | null = null;
   try {
     await initWasm();
 
@@ -84,12 +89,10 @@ export async function generateMembershipProof(
     const noir = new Noir(membershipCircuit as any);
     const { witness } = await noir.execute(inputs);
 
-    const backend = new UltraHonkBackend(membershipCircuit.bytecode);
+    backend = new UltraHonkBackend(membershipCircuit.bytecode);
     const startTime = performance.now();
-    const proof = await backend.generateProof(witness, { keccak: true });
+    const proof = await backend.generateProof(witness, { keccakZK: true });
     const provingTimeMs = performance.now() - startTime;
-
-    await backend.destroy();
 
     return {
       proof: proof.proof,
@@ -100,6 +103,14 @@ export async function generateMembershipProof(
     const message =
       error instanceof Error ? error.message : String(error);
     throw new Error(`Membership proof generation failed: ${message}`);
+  } finally {
+    if (backend) {
+      try {
+        await backend.destroy();
+      } catch {
+        // Do not mask proof-generation errors with cleanup failures.
+      }
+    }
   }
 }
 
@@ -117,21 +128,29 @@ export async function verifyProofLocally(
   circuitType: CircuitType,
   proofData: ProofResult,
 ): Promise<boolean> {
+  let backend: UltraHonkBackend | null = null;
   try {
     await initWasm();
 
     const circuit =
       circuitType === 'age_verify' ? ageCircuit : membershipCircuit;
-    const backend = new UltraHonkBackend(circuit.bytecode);
+    backend = new UltraHonkBackend(circuit.bytecode);
     const isValid = await backend.verifyProof(
       { proof: proofData.proof, publicInputs: proofData.publicInputs },
-      { keccak: true },
+      { keccakZK: true },
     );
-    await backend.destroy();
     return isValid;
   } catch (error) {
     const message =
       error instanceof Error ? error.message : String(error);
     throw new Error(`Proof verification failed: ${message}`);
+  } finally {
+    if (backend) {
+      try {
+        await backend.destroy();
+      } catch {
+        // Do not mask proof-verification errors with cleanup failures.
+      }
+    }
   }
 }

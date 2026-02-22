@@ -7,7 +7,15 @@
 
 import { init as initGaraga, getZKHonkCallData } from 'garaga';
 import { WalletAccount } from 'starknet';
-import { REGISTRY_ADDRESS, CIRCUIT_IDS, VK_PATHS } from './config';
+import {
+  REGISTRY_ADDRESS,
+  CIRCUIT_IDS,
+  SEPOLIA_CHAIN_ID,
+  VK_PATHS,
+  isSepoliaChainId,
+  resolvePublicAsset,
+} from './config';
+import { getWalletExtensionChainId } from './wallet';
 import type { ProofResult, CircuitType, SubmitResult, CalldataResult } from './types';
 
 let garagaInitialized = false;
@@ -64,7 +72,7 @@ export async function generateCalldata(
 
   // Step 3: Load VK bytes (static asset served by Vite from public/vk/)
   const vkPath = VK_PATHS[circuitType];
-  const vkResponse = await fetch(vkPath);
+  const vkResponse = await fetch(resolvePublicAsset(vkPath));
   if (!vkResponse.ok) {
     throw new Error(`Failed to load VK file from ${vkPath}: ${vkResponse.status}`);
   }
@@ -90,16 +98,36 @@ export async function submitProof(
   walletAccount: WalletAccount,
   calldataResult: CalldataResult,
 ): Promise<SubmitResult> {
+  const walletChainId = await getWalletExtensionChainId(walletAccount);
+  if (walletChainId && !isSepoliaChainId(walletChainId)) {
+    throw new Error(
+      `Wrong wallet network: extension is on ${walletChainId}. Please switch ArgentX/Braavos to Starknet Sepolia (${SEPOLIA_CHAIN_ID}) before submitting.`,
+    );
+  }
+
+  const chainId = await walletAccount.getChainId();
+  if (!isSepoliaChainId(chainId)) {
+    throw new Error(
+      `Wrong network: connected to ${chainId}. Please switch wallet to Starknet Sepolia (${SEPOLIA_CHAIN_ID}) before submitting.`,
+    );
+  }
+
   const circuitId = CIRCUIT_IDS[calldataResult.circuitType];
   const { calldata } = calldataResult;
 
-  // Format calldata for verify_and_register:
-  // arg 1: circuit_id (u8) -- single felt
-  // arg 2: full_proof_with_hints (Span<felt252>) -- [length, ...elements]
+  // garaga.getZKHonkCallData() returns *full* verifier calldata, already encoded
+  // as Span<felt252>: [len, ...full_proof_with_hints].
+  // Do not prepend another length here, or verifier deserialization will fail.
+  const looksLikePrefixedSpan =
+    calldata.length > 0 && calldata[0] === BigInt(calldata.length - 1);
+  const proofSpan: bigint[] = looksLikePrefixedSpan
+    ? calldata
+    : [BigInt(calldata.length), ...calldata];
+
+  // verify_and_register(circuit_id: u8, full_proof_with_hints: Span<felt252>)
   const txCalldata: string[] = [
     circuitId.toString(),
-    calldata.length.toString(),
-    ...calldata.map((v) => '0x' + v.toString(16)),
+    ...proofSpan.map((v) => '0x' + v.toString(16)),
   ];
 
   const result = await walletAccount.execute({
