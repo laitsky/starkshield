@@ -15,10 +15,14 @@ contracts_membership_verifier/target/
 # Node modules
 scripts/node_modules/
 scripts/dist/
+sdk/node_modules/
+sdk/dist/
+package-lock.json
 
 # Generated credential files (contain random values, should be regenerated)
 scripts/demo_credential*.json
 scripts/prover_*.toml
+scripts/.issuer_keys.json
 
 # OS files
 .DS_Store
@@ -26,3 +30,10 @@ scripts/prover_*.toml
 # IDE
 .vscode/
 .idea/
+
+.snfoundry_cache
+snfoundry.toml
+
+# Garaga verifier test artifacts
+contracts_age_verifier/tests/proof_calldata.txt
+contracts_membership_verifier/tests/proof_calldata.txt
