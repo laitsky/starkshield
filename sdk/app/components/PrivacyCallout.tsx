@@ -5,13 +5,19 @@
  * Contexts: credential loading, proof generation, and before on-chain submission.
  */
 
-const MESSAGES: Record<PrivacyCalloutProps['context'], string> = {
-  credential:
-    'Your credential data stays on your device. It is never uploaded to any server.',
-  proof:
-    'Proof generation happens entirely in your browser. Only the ZK proof (not your data) will be shared.',
-  submission:
-    'Only the proof and public outputs go on-chain. Your actual age, identity, and credential details remain private.',
+const MESSAGES: Record<PrivacyCalloutProps['context'], { text: string; detail: string }> = {
+  credential: {
+    text: 'Data stays on your device',
+    detail: 'Your credential data is never uploaded to any server.',
+  },
+  proof: {
+    text: 'Browser-local computation',
+    detail: 'Proof generation happens entirely in your browser. Only the ZK proof is shared.',
+  },
+  submission: {
+    text: 'Privacy preserved on-chain',
+    detail: 'Only the proof and public outputs go on-chain. Your identity remains private.',
+  },
 };
 
 interface PrivacyCalloutProps {
@@ -19,16 +25,23 @@ interface PrivacyCalloutProps {
 }
 
 export default function PrivacyCallout({ context }: PrivacyCalloutProps) {
+  const msg = MESSAGES[context];
+
   return (
     <div
       role="note"
       aria-label="Privacy notice"
-      className="flex items-start gap-2 rounded-lg border border-green-700/40 bg-green-950/30 px-4 py-3 text-sm text-green-300"
+      className="brutal-card-static animate-fade-in p-4"
+      style={{ borderLeftWidth: '4px', borderLeftColor: 'var(--color-green)' }}
     >
-      <span className="mt-0.5 shrink-0" aria-hidden="true">
-        &#128274;
-      </span>
-      <span>{MESSAGES[context]}</span>
+      <div className="space-y-1">
+        <p className="text-xs font-bold uppercase tracking-wide text-[var(--color-green)]">
+          {msg.text}
+        </p>
+        <p className="text-xs text-[var(--color-text-3)] leading-relaxed font-mono">
+          {msg.detail}
+        </p>
+      </div>
     </div>
   );
 }

@@ -8,7 +8,10 @@ const ProofGenerator = lazy(() => import('./views/ProofGenerator'));
 const VerificationDashboard = lazy(() => import('./views/VerificationDashboard'));
 
 const LoadingFallback = () => (
-  <div className="flex items-center justify-center py-20 text-gray-400">Loading...</div>
+  <div className="flex flex-col items-center justify-center py-24 gap-4">
+    <div className="h-8 w-8 border-3 border-[var(--color-border-hard)] border-t-[var(--color-accent)] animate-spin" />
+    <span className="text-xs font-mono uppercase tracking-widest text-[var(--color-text-3)]">Loading...</span>
+  </div>
 );
 
 const router = createBrowserRouter([

@@ -6,6 +6,11 @@ import ProofProgress from '../components/ProofProgress';
 import PrivacyCallout from '../components/PrivacyCallout';
 import ErrorBanner from '../components/ErrorBanner';
 import { useWallet } from '../hooks/useWallet';
+import {
+  resolvePublicAsset,
+  validateAgeCredential,
+  validateMembershipCredential,
+} from '../../src/index';
 import type {
   CredentialJSON,
   CircuitType,
@@ -19,13 +24,49 @@ import type {
 
 function truncateHex(hex: string, start = 6, end = 4): string {
   if (hex.length <= start + end + 2) return hex;
-  return `${hex.slice(0, start + 2)}...${hex.slice(-end)}`;
+  return `${hex.slice(0, start + 2)}\u2026${hex.slice(-end)}`;
 }
 
-function determineCircuitType(credential: CredentialJSON): CircuitType {
-  return BigInt(credential.credential_type) === 0n
-    ? 'age_verify'
-    : 'membership_proof';
+function determineCircuitType(credential: CredentialJSON): CircuitType | null {
+  try {
+    const credentialType = BigInt(credential.credential_type);
+    if (credentialType === 0n) return 'age_verify';
+    if (credentialType === 1n) return 'membership_proof';
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function validateCredentialForProof(credential: CredentialJSON): string | null {
+  let credentialType: bigint;
+  try {
+    credentialType = BigInt(credential.credential_type);
+  } catch {
+    return 'Invalid credential_type value.';
+  }
+
+  const validation =
+    credentialType === 0n
+      ? validateAgeCredential(credential)
+      : credentialType === 1n
+        ? validateMembershipCredential(credential)
+        : {
+            valid: false,
+            errors: [`Unsupported credential_type: ${credential.credential_type}`],
+          };
+
+  if (!validation.valid) {
+    return validation.errors.join(', ');
+  }
+
+  try {
+    BigInt(credential.expires_at);
+  } catch {
+    return 'Invalid expires_at value.';
+  }
+
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -75,9 +116,20 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="ml-2 rounded border border-gray-700 px-2 py-0.5 text-xs text-gray-400 transition hover:border-gray-500 hover:text-gray-200"
+      className="ml-2 p-1.5 text-[var(--color-text-3)] transition-colors duration-150 hover:text-[var(--color-accent)]"
+      aria-label={copied ? 'Copied!' : 'Copy to clipboard'}
+      title={copied ? 'Copied!' : 'Copy to clipboard'}
     >
-      {copied ? 'Copied' : 'Copy'}
+      {copied ? (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-green)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      ) : (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="0" ry="0" />
+          <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+        </svg>
+      )}
     </button>
   );
 }
@@ -89,51 +141,76 @@ function CopyButton({ text }: { text: string }) {
 function CredentialCard({ credential }: { credential: CredentialJSON }) {
   const circuitType = determineCircuitType(credential);
   const isAge = circuitType === 'age_verify';
-  const expiresAtUnix = Number(BigInt(credential.expires_at));
+  const expiresAtUnix = (() => {
+    try {
+      return Number(BigInt(credential.expires_at));
+    } catch {
+      return 0;
+    }
+  })();
   const expiresAt = new Date(expiresAtUnix * 1000);
   const isExpired = expiresAtUnix <= Math.floor(Date.now() / 1000);
 
   return (
-    <div className="rounded-lg border border-gray-700 bg-gray-800/50 p-4 space-y-2">
+    <div
+      className="brutal-card-static p-4 space-y-3"
+      style={{
+        borderLeftWidth: '4px',
+        borderLeftColor: isExpired
+          ? 'var(--color-red)'
+          : isAge
+            ? 'var(--color-cyan)'
+            : 'var(--color-accent-2)',
+      }}
+    >
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-100">
-          {isAge ? 'Age Verification' : 'Membership Verification'}
-        </h3>
-        <span
-          className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-            isAge
-              ? 'bg-blue-900/50 text-blue-300'
-              : 'bg-purple-900/50 text-purple-300'
-          }`}
-        >
-          {isAge ? 'Age' : 'Membership'}
-        </span>
+        <div>
+          <h3 className="text-sm font-bold uppercase text-[var(--color-text)]">
+            {circuitType === 'age_verify'
+              ? 'Age Verification'
+              : circuitType === 'membership_proof'
+                ? 'Membership Verification'
+                : 'Unknown Credential'}
+          </h3>
+          <span className={`badge mt-1 ${isAge ? 'badge-age' : 'badge-membership'}`}>
+            {isAge ? 'Age' : 'Membership'}
+          </span>
+        </div>
       </div>
-      <div className="flex justify-between text-xs">
-        <span className="text-gray-500">Issuer</span>
-        <span className="font-mono text-gray-400">
-          {truncateHex(credential.issuer_id)}
-        </span>
+      <div className="space-y-0">
+        <div className="data-row">
+          <span className="text-xs font-bold uppercase text-[var(--color-text-3)]">Issuer</span>
+          <span className="font-mono text-xs text-[var(--color-text-2)]">
+            {truncateHex(credential.issuer_id)}
+          </span>
+        </div>
+        <div className="data-row">
+          <span className="text-xs font-bold uppercase text-[var(--color-text-3)]">Expires</span>
+          <span
+            className={`text-xs ${isExpired ? 'text-[var(--color-red)]' : 'text-[var(--color-text-2)]'}`}
+          >
+            {expiresAt.toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+            })}
+            {isExpired ? ' (Expired)' : ''}
+          </span>
+        </div>
       </div>
-      <div className="flex justify-between text-xs">
-        <span className="text-gray-500">Expires</span>
-        <span
-          className={isExpired ? 'text-red-400' : 'text-gray-400'}
-        >
-          {expiresAt.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-          })}
-          {isExpired ? ' (Expired)' : ''}
-        </span>
-      </div>
+
+      {isExpired && (
+        <div className="p-2.5 border border-[var(--color-red)] bg-[var(--color-surface-raised)] text-xs text-[var(--color-red)] font-mono flex items-start gap-2">
+          <span className="shrink-0 mt-px">!</span>
+          <span>This credential has expired. The on-chain verifier will reject proofs from expired credentials.</span>
+        </div>
+      )}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Public Outputs Preview
+// Public Outputs Preview with explanations
 // ---------------------------------------------------------------------------
 
 function OutputPreview({ outputs }: { outputs: PublicOutputs }) {
@@ -153,36 +230,57 @@ function OutputPreview({ outputs }: { outputs: PublicOutputs }) {
       : outputs.setHash;
 
   return (
-    <div className="space-y-3">
-      <h3 className="text-sm font-medium text-gray-200">Public Outputs</h3>
-      <div className="space-y-2 rounded-lg border border-gray-700 bg-gray-800/50 p-4 text-sm">
-        <div className="flex items-center justify-between">
-          <span className="text-gray-500">Circuit Type</span>
-          <span className="text-gray-200">
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-sm font-bold uppercase text-[var(--color-text)]">Public Outputs</h3>
+        <p className="text-xs text-[var(--color-text-3)] mt-1">
+          These values will be visible on-chain. They prove your claim without revealing your private data.
+        </p>
+      </div>
+
+      <div className="brutal-card-static p-4 space-y-0">
+        <div className="data-row">
+          <span className="text-xs font-bold uppercase text-[var(--color-text-3)]">Circuit Type</span>
+          <span className="text-xs text-[var(--color-text)]">
             {outputs.circuitType === 'age_verify'
               ? 'Age Verification'
               : 'Membership Verification'}
           </span>
         </div>
-        <div className="flex items-center justify-between">
-          <span className="text-gray-500">Nullifier</span>
-          <span className="flex items-center font-mono text-xs text-gray-300">
+        <div className="data-row">
+          <div className="space-y-0.5">
+            <span className="text-xs font-bold uppercase text-[var(--color-text-3)]">Nullifier</span>
+            <p className="text-[10px] text-[var(--color-text-3)]">Unique per-dApp ID that prevents replay attacks</p>
+          </div>
+          <span className="flex items-center font-mono text-xs text-[var(--color-text-2)]">
             {truncateHex(nullifier, 8, 6)}
             <CopyButton text={nullifier} />
           </span>
         </div>
-        <div className="flex items-center justify-between">
-          <span className="text-gray-500">Attribute Key</span>
-          <span className="font-mono text-xs text-gray-300">
+        <div className="data-row">
+          <div className="space-y-0.5">
+            <span className="text-xs font-bold uppercase text-[var(--color-text-3)]">Attribute Key</span>
+            <p className="text-[10px] text-[var(--color-text-3)]">Identifies what attribute is being verified</p>
+          </div>
+          <span className="flex items-center font-mono text-xs text-[var(--color-text-2)]">
             {truncateHex(attributeKey)}
+            <CopyButton text={attributeKey} />
           </span>
         </div>
-        <div className="flex items-center justify-between">
-          <span className="text-gray-500">
-            {outputs.circuitType === 'age_verify' ? 'Threshold' : 'Set Hash'}
-          </span>
-          <span className="font-mono text-xs text-gray-300">
+        <div className="data-row">
+          <div className="space-y-0.5">
+            <span className="text-xs font-bold uppercase text-[var(--color-text-3)]">
+              {outputs.circuitType === 'age_verify' ? 'Threshold' : 'Set Hash'}
+            </span>
+            <p className="text-[10px] text-[var(--color-text-3)]">
+              {outputs.circuitType === 'age_verify'
+                ? 'The minimum age being proven (e.g. >= 18)'
+                : 'Hash of the allowed membership set'}
+            </p>
+          </div>
+          <span className="flex items-center font-mono text-xs text-[var(--color-text-2)]">
             {truncateHex(thresholdOrSetHash)}
+            <CopyButton text={thresholdOrSetHash} />
           </span>
         </div>
       </div>
@@ -226,10 +324,21 @@ export default function ProofGenerator() {
   const [threshold, setThreshold] = useState(18);
   const [dappContextId, setDappContextId] = useState(42);
   const [allowedSetInput, setAllowedSetInput] = useState('0x64, 0x65, 0x66');
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // ---- Elapsed time counter ----
   const [elapsed, setElapsed] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    if (!credential) return;
+    const validationError = validateCredentialForProof(credential);
+    if (!validationError) return;
+
+    setUploadError(`Invalid credential: ${validationError}`);
+    setCredential(null);
+    reset();
+  }, [credential, reset]);
 
   useEffect(() => {
     const isActive =
@@ -268,6 +377,17 @@ export default function ProofGenerator() {
     step === 'generating' ||
     step === 'calldata';
 
+  // ---- Check if credential is expired ----
+  const credentialExpired = credential
+    ? (() => {
+        try {
+          return Number(BigInt(credential.expires_at)) <= Math.floor(Date.now() / 1000);
+        } catch {
+          return true;
+        }
+      })()
+    : false;
+
   // ---- Handlers ----
 
   async function handleLoadDemo(path: string) {
@@ -275,11 +395,19 @@ export default function ProofGenerator() {
       const resp = await fetch(path);
       if (!resp.ok) throw new Error(`Failed to load: ${resp.status}`);
       const json: CredentialJSON = await resp.json();
+
+      const validationError = validateCredentialForProof(json);
+      if (validationError) {
+        setUploadError(`Demo credential is invalid: ${validationError}`);
+        return;
+      }
+
       setCredential(json);
+      setUploadError(null);
       reset();
     } catch (err) {
-      // Use hook error state for display
-      console.error('Failed to load demo credential:', err);
+      const message = err instanceof Error ? err.message : String(err);
+      setUploadError(`Failed to load demo credential: ${message}`);
     }
   }
 
@@ -291,10 +419,18 @@ export default function ProofGenerator() {
     reader.onload = () => {
       try {
         const json: CredentialJSON = JSON.parse(reader.result as string);
+        const validationError = validateCredentialForProof(json);
+        if (validationError) {
+          setUploadError(`Invalid credential: ${validationError}`);
+          return;
+        }
         setCredential(json);
+        setUploadError(null);
         reset();
-      } catch (err) {
-        console.error('Failed to parse credential:', err);
+      } catch {
+        setUploadError(
+          'Failed to parse JSON. Your credential file must contain fields like subject_id, issuer_id, credential_type, signature, etc. See the Credentials page for the full format guide.',
+        );
       }
     };
     reader.readAsText(file);
@@ -328,7 +464,6 @@ export default function ProofGenerator() {
 
     const result = await generateProof(credential, resolvedCircuitType, params);
 
-    // If proof succeeded, automatically prepare calldata for preview
     if (result) {
       await prepareCalldata(result, resolvedCircuitType);
     }
@@ -380,20 +515,28 @@ export default function ProofGenerator() {
   // ---- Render ----
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-gray-100">Proof Generator</h2>
+    <div className="space-y-8 animate-fade-in-up">
+      {/* Header */}
+      <div className="space-y-3">
+        <span className="section-label">// Prove</span>
+        <h2 className="text-3xl font-extrabold uppercase text-[var(--color-text)]">Proof Generator</h2>
+        <p className="text-sm text-[var(--color-text-2)]">
+          Generate a zero-knowledge proof from your credential and submit it on-chain.
+          Your private data never leaves your browser.
+        </p>
+      </div>
 
       {/* Section 1: Credential Selection */}
       {credential ? (
-        <div className="space-y-2">
+        <div className="space-y-3 animate-fade-in">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-400">Selected Credential</span>
+            <span className="section-label">01 &mdash; Selected Credential</span>
             <button
               onClick={() => {
                 setCredential(null);
                 handleReset();
               }}
-              className="text-xs text-gray-500 transition hover:text-gray-300"
+              className="text-xs font-bold uppercase tracking-wide text-[var(--color-text-3)] transition-colors duration-150 hover:text-[var(--color-accent)]"
             >
               Change
             </button>
@@ -401,28 +544,31 @@ export default function ProofGenerator() {
           <CredentialCard credential={credential} />
         </div>
       ) : (
-        <div className="space-y-4 rounded-xl border border-gray-800 bg-gray-900 p-6">
-          <h3 className="text-sm font-medium text-gray-300">
-            Select a Credential
-          </h3>
+        <div className="brutal-card-static p-6 space-y-5 animate-fade-in">
+          <span className="section-label">01 &mdash; Select a Credential</span>
+          <p className="text-xs text-[var(--color-text-3)]">
+            Choose a demo credential to try the flow, or upload your own issuer-signed JSON file.
+          </p>
           <div className="flex flex-wrap gap-3">
             <button
               onClick={() =>
-                handleLoadDemo('/credentials/demo_credential.json')
+                handleLoadDemo(resolvePublicAsset('credentials/demo_credential.json'))
               }
-              className="rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-sm text-gray-300 transition hover:border-blue-600 hover:text-blue-300"
+              className="btn-secondary flex items-center gap-2 !text-xs"
             >
-              Load Age Demo
+              <span className="badge badge-age !text-[8px] !py-0 !px-1.5">Age</span>
+              Demo Credential
             </button>
             <button
               onClick={() =>
                 handleLoadDemo(
-                  '/credentials/demo_credential_membership.json',
+                  resolvePublicAsset('credentials/demo_credential_membership.json'),
                 )
               }
-              className="rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-sm text-gray-300 transition hover:border-purple-600 hover:text-purple-300"
+              className="btn-secondary flex items-center gap-2 !text-xs"
             >
-              Load Membership Demo
+              <span className="badge badge-membership !text-[8px] !py-0 !px-1.5">Mbr</span>
+              Demo Credential
             </button>
             <div>
               <input
@@ -434,79 +580,123 @@ export default function ProofGenerator() {
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-sm text-gray-300 transition hover:border-gray-500 hover:text-gray-100"
+                className="btn-secondary flex items-center gap-2 !text-xs"
               >
-                Upload JSON
+                Upload Your JSON
               </button>
             </div>
           </div>
+          {uploadError && (
+            <div
+              className="p-3 flex items-start gap-2 border border-[var(--color-red)] bg-[var(--color-surface-raised)] animate-fade-in"
+            >
+              <span className="text-[var(--color-red)] text-xs font-bold shrink-0">!</span>
+              <p className="text-xs text-[var(--color-red)] font-mono leading-relaxed">{uploadError}</p>
+            </div>
+          )}
+          <p className="text-[10px] text-[var(--color-text-3)] font-mono">
+            Not sure about the file format? Check the{' '}
+            <a href="/" className="text-[var(--color-cyan)] hover:text-[var(--color-accent)] transition-colors">
+              Credentials page
+            </a>{' '}
+            for a detailed schema guide.
+          </p>
         </div>
       )}
 
       {/* Section 2: Proof Parameters */}
       {credential && step === 'idle' && !proofResult && (
-        <div className="space-y-4 rounded-xl border border-gray-800 bg-gray-900 p-6">
-          <h3 className="text-sm font-medium text-gray-300">
-            Proof Parameters
-          </h3>
+        <div className="brutal-card-static p-6 space-y-5 animate-fade-in-up">
+          <div>
+            <span className="section-label">02 &mdash; Proof Parameters</span>
+            <p className="text-xs text-[var(--color-text-3)] mt-2">
+              {isAgeCircuit
+                ? 'Configure what you want to prove about your age. The proof will verify your age meets the threshold without revealing your actual age.'
+                : 'Configure the membership set to verify against. The proof will verify your membership tier is in the allowed set without revealing which one.'}
+            </p>
+          </div>
+
+          <div className="p-3 border border-[var(--color-border-hard)] bg-[var(--color-surface-raised)] text-[10px] text-[var(--color-text-3)] font-mono leading-relaxed">
+            Demo note: in a real integration, the verifying dApp sets these parameters (threshold / allowed set and context).
+            StarkShield stores the resulting threshold or set-hash on-chain so dApps can enforce their own policy.
+          </div>
 
           {isAgeCircuit ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-xs text-gray-500">
+                <label className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase text-[var(--color-text-2)]">
                   Age Threshold
                 </label>
+                <p className="text-[10px] text-[var(--color-text-3)] mb-2">
+                  The minimum age to prove. E.g. 18 means "I am at least 18 years old."
+                </p>
                 <input
                   type="number"
                   value={threshold}
                   onChange={(e) =>
                     setThreshold(parseInt(e.target.value, 10) || 0)
                   }
-                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 focus:border-blue-500 focus:outline-none"
-                  min={0}
+                  className="input-field"
+                  min={1}
+                  max={150}
+                  placeholder="18"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs text-gray-500">
+                <label className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase text-[var(--color-text-2)]">
                   dApp Context ID
                 </label>
+                <p className="text-[10px] text-[var(--color-text-3)] mb-2">
+                  A unique identifier for the application requesting verification. This scopes the nullifier
+                  so the same credential produces different proofs for different dApps.
+                </p>
                 <input
                   type="number"
                   value={dappContextId}
                   onChange={(e) =>
                     setDappContextId(parseInt(e.target.value, 10) || 0)
                   }
-                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 focus:border-blue-500 focus:outline-none"
+                  className="input-field"
                   min={0}
+                  placeholder="42"
                 />
               </div>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-xs text-gray-500">
+                <label className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase text-[var(--color-text-2)]">
                   Allowed Set (comma-separated hex values)
                 </label>
+                <p className="text-[10px] text-[var(--color-text-3)] mb-2">
+                  The set of valid membership tiers. The proof verifies your tier is one of these values
+                  without revealing which one. E.g. 0x64 = Gold, 0x65 = Platinum, 0x66 = Diamond.
+                </p>
                 <input
                   type="text"
                   value={allowedSetInput}
                   onChange={(e) => setAllowedSetInput(e.target.value)}
-                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm font-mono text-gray-100 focus:border-purple-500 focus:outline-none"
+                  className="input-field"
                   placeholder="0x64, 0x65, 0x66"
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs text-gray-500">
+                <label className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase text-[var(--color-text-2)]">
                   dApp Context ID
                 </label>
+                <p className="text-[10px] text-[var(--color-text-3)] mb-2">
+                  A unique identifier for the application requesting verification. This scopes the nullifier
+                  so the same credential produces different proofs for different dApps.
+                </p>
                 <input
                   type="number"
                   value={dappContextId}
                   onChange={(e) =>
                     setDappContextId(parseInt(e.target.value, 10) || 0)
                   }
-                  className="w-full rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm text-gray-100 focus:border-purple-500 focus:outline-none"
+                  className="input-field"
                   min={0}
+                  placeholder="42"
                 />
               </div>
             </div>
@@ -514,33 +704,63 @@ export default function ProofGenerator() {
 
           <PrivacyCallout context="proof" />
 
+          {/* Expired credential warning */}
+          {credentialExpired && (
+            <div
+              className="p-3 flex items-start gap-2 border border-[var(--color-red)] bg-[var(--color-surface-raised)]"
+            >
+              <span className="text-[var(--color-red)] text-xs font-bold shrink-0">!</span>
+              <p className="text-xs text-[var(--color-red)] font-mono">
+                This credential has expired. You can still generate a proof locally, but it will be rejected by the on-chain verifier.
+              </p>
+            </div>
+          )}
+
           <button
             onClick={handleGenerateProof}
             disabled={!credential || isGenerating}
-            className="w-full rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className="btn-primary w-full !py-3 flex items-center justify-center gap-2"
           >
-            Generate Proof
+            {credentialExpired ? 'Generate Proof (Credential Expired)' : 'Generate Proof'}
           </button>
+
+          {/* Pre-generation info */}
+          <div className="flex items-center gap-4 text-[10px] text-[var(--color-text-3)] font-mono">
+            <span>Estimated time: ~15-30s</span>
+            <span>Runs entirely in your browser via WASM</span>
+          </div>
         </div>
       )}
 
       {/* Section 3: Progress */}
       {(isGenerating || step === 'submitting') && (
-        <div className="space-y-4 rounded-xl border border-gray-800 bg-gray-900 p-6">
-          <ProofProgress currentStep={step} />
-          <div className="text-xs text-gray-500">
-            Elapsed: {elapsed}s
+        <div className="brutal-card-static p-6 space-y-5 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <span className="section-label">03 &mdash; Processing</span>
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] text-[var(--color-text-3)] font-mono">
+                ~15-30s typical
+              </span>
+              <span className="badge badge-checking font-mono">{elapsed}s</span>
+            </div>
           </div>
+          <ProofProgress currentStep={step} />
+
+          {elapsed > 30 && (
+            <p className="text-[10px] text-[var(--color-text-3)] font-mono animate-fade-in">
+              Taking longer than usual. This is normal on slower devices &mdash; the proof is being computed locally.
+            </p>
+          )}
         </div>
       )}
 
       {/* Section 4: Public Output Preview */}
       {step === 'previewing' && publicOutputs && (
-        <div className="space-y-4 rounded-xl border border-gray-800 bg-gray-900 p-6">
+        <div className="brutal-card-static p-6 space-y-5 animate-fade-in-up">
           <OutputPreview outputs={publicOutputs} />
 
           {proofResult && (
-            <div className="text-xs text-gray-500">
+            <div className="flex items-center gap-2 text-xs text-[var(--color-green)] font-mono">
               Proof generated in {(proofResult.provingTimeMs / 1000).toFixed(1)}s
             </div>
           )}
@@ -549,18 +769,26 @@ export default function ProofGenerator() {
             {walletAccount ? (
               <button
                 onClick={handleSubmit}
-                className="flex-1 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-green-500"
+                className="btn-success flex-1 flex items-center justify-center gap-2"
               >
                 Submit On-Chain
               </button>
             ) : (
-              <div className="flex-1 rounded-lg border border-yellow-700/40 bg-yellow-950/30 px-4 py-2.5 text-center text-sm text-yellow-300">
-                Connect wallet to submit
+              <div
+                className="brutal-card-static flex-1 p-4 text-center space-y-2"
+                style={{ borderColor: 'var(--color-accent)' }}
+              >
+                <p className="text-xs font-bold uppercase text-[var(--color-accent)]">
+                  Wallet required
+                </p>
+                <p className="text-[10px] text-[var(--color-text-3)] font-mono">
+                  Connect your Starknet wallet (ArgentX or Braavos) using the button in the header to submit this proof on-chain.
+                </p>
               </div>
             )}
             <button
               onClick={handleReset}
-              className="rounded-lg border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-gray-300 transition hover:border-gray-600 hover:text-gray-100"
+              className="btn-secondary"
             >
               Cancel
             </button>
@@ -570,28 +798,39 @@ export default function ProofGenerator() {
 
       {/* Section 5: Result */}
       {step === 'complete' && submitResult && (
-        <div className="space-y-4 rounded-xl border border-green-700/40 bg-green-950/20 p-6">
-          <div className="flex items-center gap-2 text-green-300">
-            <span className="text-lg">{'\u2713'}</span>
-            <span className="font-medium">Proof submitted successfully!</span>
+        <div
+          className="brutal-card-static p-6 space-y-5 animate-fade-in overflow-hidden"
+          style={{ borderLeftWidth: '4px', borderLeftColor: 'var(--color-green)' }}
+        >
+          <div>
+            <p className="text-sm font-bold uppercase text-[var(--color-green)]">Proof submitted successfully</p>
+            <p className="text-xs text-[var(--color-text-3)] mt-1 font-mono">Your zero-knowledge proof is now on Starknet Sepolia. It may take a few minutes to be confirmed.</p>
           </div>
 
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-500">Transaction Hash</span>
-              <a
-                href={`https://sepolia.starkscan.co/tx/${submitResult.transactionHash}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-mono text-xs text-blue-400 underline transition hover:text-blue-300"
-              >
-                {truncateHex(submitResult.transactionHash, 8, 6)}
-              </a>
+          <div className="brutal-card-static p-4 space-y-0">
+            <div className="data-row">
+              <span className="text-xs font-bold uppercase text-[var(--color-text-3)]">Transaction Hash</span>
+              <span className="flex items-center">
+                <a
+                  href={`https://sepolia.starkscan.co/tx/${submitResult.transactionHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 font-mono text-xs text-[var(--color-cyan)] transition-colors duration-150 hover:text-[var(--color-accent)]"
+                >
+                  {truncateHex(submitResult.transactionHash, 8, 6)}
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                    <polyline points="15 3 21 3 21 9" />
+                    <line x1="10" y1="14" x2="21" y2="3" />
+                  </svg>
+                </a>
+                <CopyButton text={submitResult.transactionHash} />
+              </span>
             </div>
             {publicOutputs && (
-              <div className="flex items-center justify-between">
-                <span className="text-gray-500">Nullifier</span>
-                <span className="font-mono text-xs text-gray-300">
+              <div className="data-row">
+                <span className="text-xs font-bold uppercase text-[var(--color-text-3)]">Nullifier</span>
+                <span className="flex items-center font-mono text-xs text-[var(--color-text-2)]">
                   {truncateHex(
                     publicOutputs.circuitType === 'age_verify'
                       ? publicOutputs.nullifier
@@ -599,6 +838,7 @@ export default function ProofGenerator() {
                     8,
                     6,
                   )}
+                  <CopyButton text={publicOutputs.nullifier} />
                 </span>
               </div>
             )}
@@ -607,13 +847,13 @@ export default function ProofGenerator() {
           <div className="flex gap-3">
             <button
               onClick={handleReset}
-              className="flex-1 rounded-lg bg-violet-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-violet-500"
+              className="btn-primary flex-1 flex items-center justify-center gap-2"
             >
-              Generate Another Proof
+              Generate Another
             </button>
             <button
               onClick={() => navigate('/dashboard')}
-              className="rounded-lg border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-gray-400 transition hover:text-gray-200"
+              className="btn-secondary flex items-center gap-2"
             >
               View Dashboard
             </button>
@@ -623,11 +863,11 @@ export default function ProofGenerator() {
 
       {/* Section 6: Error */}
       {step === 'error' && error && (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-fade-in">
           <ErrorBanner error={error} onDismiss={handleReset} />
           <button
             onClick={handleReset}
-            className="w-full rounded-lg border border-gray-700 bg-gray-800 px-4 py-2.5 text-sm text-gray-300 transition hover:border-gray-600 hover:text-gray-100"
+            className="btn-secondary w-full flex items-center justify-center gap-2"
           >
             Try Again
           </button>

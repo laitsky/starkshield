@@ -1,11 +1,4 @@
 import { useState, useCallback, useMemo } from 'react';
-import {
-  initWasm,
-  generateAgeProof,
-  generateMembershipProof,
-  generateCalldata,
-  submitProof,
-} from '../../src/index';
 import type {
   ProofResult,
   CalldataResult,
@@ -16,6 +9,15 @@ import type {
   MembershipProofParams,
 } from '../../src/index';
 import type { WalletAccount } from 'starknet';
+
+type ProofSdkModule = typeof import('../../src/index');
+let proofSdkModule: ProofSdkModule | null = null;
+
+async function loadProofSdk(): Promise<ProofSdkModule> {
+  if (proofSdkModule) return proofSdkModule;
+  proofSdkModule = await import('../../src/index');
+  return proofSdkModule;
+}
 
 export type ProofStep =
   | 'idle'
@@ -46,15 +48,14 @@ const INITIAL_STATE: ProofState = {
 /**
  * Public output structures parsed from proof public inputs.
  *
- * Age verify (9 public inputs):
- *   [0] threshold, [1] dappContextId, [2] currentTimestamp,
- *   [3] issuerPubKeyX, [4] issuerPubKeyY, [5] nullifier,
- *   [6] echoedAttributeKey, [7] echoedThreshold, [8] echoedIssuerX
+ * Age verify (8 public inputs):
+ *   [0] pubKeyX, [1] pubKeyY, [2] currentTimestamp,
+ *   [3] threshold, [4] dappContextId, [5] nullifier,
+ *   [6] echoedIssuerX, [7] echoedThreshold
  *
- * Membership proof (16 public inputs):
- *   [0] dappContextId, [1] currentTimestamp,
- *   [2] issuerPubKeyX, [3] issuerPubKeyY, [4..11] allowedSet,
- *   [12] nullifier, [13] echoedAttributeKey, [14] setHash, [15] echoedIssuerX
+ * Membership proof (15 public inputs):
+ *   [0] pubKeyX, [1] pubKeyY, [2] currentTimestamp, [3] dappContextId,
+ *   [4..11] allowedSet, [12] nullifier, [13] echoedIssuerX, [14] setHash
  */
 interface AgePublicOutputs {
   circuitType: 'age_verify';
@@ -90,33 +91,33 @@ function parsePublicOutputs(
 ): PublicOutputs {
   if (!publicInputs || !circuitType) return null;
 
-  if (circuitType === 'age_verify' && publicInputs.length >= 9) {
+  if (circuitType === 'age_verify' && publicInputs.length >= 8) {
     return {
       circuitType: 'age_verify',
-      threshold: publicInputs[0],
-      dappContextId: publicInputs[1],
+      threshold: publicInputs[3],
+      dappContextId: publicInputs[4],
       currentTimestamp: publicInputs[2],
-      issuerPubKeyX: publicInputs[3],
-      issuerPubKeyY: publicInputs[4],
+      issuerPubKeyX: publicInputs[0],
+      issuerPubKeyY: publicInputs[1],
       nullifier: publicInputs[5],
-      echoedAttributeKey: publicInputs[6],
+      echoedAttributeKey: '0x1',
       echoedThreshold: publicInputs[7],
-      echoedIssuerX: publicInputs[8],
+      echoedIssuerX: publicInputs[6],
     };
   }
 
-  if (circuitType === 'membership_proof' && publicInputs.length >= 16) {
+  if (circuitType === 'membership_proof' && publicInputs.length >= 15) {
     return {
       circuitType: 'membership_proof',
-      dappContextId: publicInputs[0],
-      currentTimestamp: publicInputs[1],
-      issuerPubKeyX: publicInputs[2],
-      issuerPubKeyY: publicInputs[3],
+      dappContextId: publicInputs[3],
+      currentTimestamp: publicInputs[2],
+      issuerPubKeyX: publicInputs[0],
+      issuerPubKeyY: publicInputs[1],
       allowedSet: publicInputs.slice(4, 12),
       nullifier: publicInputs[12],
-      echoedAttributeKey: publicInputs[13],
+      echoedAttributeKey: '0x2',
       setHash: publicInputs[14],
-      echoedIssuerX: publicInputs[15],
+      echoedIssuerX: publicInputs[13],
     };
   }
 
@@ -143,18 +144,19 @@ export function useProofGeneration() {
       try {
         setCircuitType(ct);
         setState((s) => ({ ...s, step: 'initializing', error: null }));
-        await initWasm();
+        const sdk = await loadProofSdk();
+        await sdk.initWasm();
 
         setState((s) => ({ ...s, step: 'generating' }));
 
         let proofResult: ProofResult;
         if (ct === 'age_verify') {
-          proofResult = await generateAgeProof(
+          proofResult = await sdk.generateAgeProof(
             credential,
             params as AgeProofParams,
           );
         } else {
-          proofResult = await generateMembershipProof(
+          proofResult = await sdk.generateMembershipProof(
             credential,
             params as MembershipProofParams,
           );
@@ -178,7 +180,8 @@ export function useProofGeneration() {
     ): Promise<CalldataResult | null> => {
       try {
         setState((s) => ({ ...s, step: 'calldata' }));
-        const calldataResult = await generateCalldata(proofResult, ct);
+        const sdk = await loadProofSdk();
+        const calldataResult = await sdk.generateCalldata(proofResult, ct);
         setState((s) => ({ ...s, step: 'previewing', calldataResult }));
         return calldataResult;
       } catch (err) {
@@ -197,7 +200,8 @@ export function useProofGeneration() {
     ): Promise<SubmitResult | null> => {
       try {
         setState((s) => ({ ...s, step: 'submitting' }));
-        const submitResult = await submitProof(walletAccount, calldataResult);
+        const sdk = await loadProofSdk();
+        const submitResult = await sdk.submitProof(walletAccount, calldataResult);
         setState((s) => ({ ...s, step: 'complete', submitResult }));
         return submitResult;
       } catch (err) {

@@ -12,20 +12,36 @@ import type { StoredVerification } from '../hooks/useVerifications';
 
 function truncateHex(hex: string, start = 6, end = 4): string {
   if (hex.length <= start + end + 2) return hex;
-  return `${hex.slice(0, start + 2)}...${hex.slice(-end)}`;
+  return `${hex.slice(0, start + 2)}\u2026${hex.slice(-end)}`;
+}
+
+function formatAttributeKey(attributeKey: string): string {
+  const normalized = attributeKey.toLowerCase();
+  if (normalized === '0x1') return 'age (0x1)';
+  if (normalized === '0x2') return 'membership_group (0x2)';
+  return truncateHex(attributeKey);
+}
+
+function formatThresholdOrSetHash(
+  circuitType: StoredVerification['circuitType'],
+  value: string,
+): string {
+  if (circuitType === 'age_verify') {
+    try {
+      const threshold = Number(BigInt(value));
+      return `${threshold} (${truncateHex(value)})`;
+    } catch {
+      return truncateHex(value);
+    }
+  }
+  return truncateHex(value);
 }
 
 function CircuitBadge({ circuitType }: { circuitType: StoredVerification['circuitType'] }) {
   const isAge = circuitType === 'age_verify';
   return (
-    <span
-      className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-        isAge
-          ? 'bg-violet-900/50 text-violet-300'
-          : 'bg-blue-900/50 text-blue-300'
-      }`}
-    >
-      {isAge ? 'Age Verification' : 'Membership Verification'}
+    <span className={`badge ${isAge ? 'badge-age' : 'badge-membership'}`}>
+      {isAge ? 'Age' : 'Membership'}
     </span>
   );
 }
@@ -33,33 +49,39 @@ function CircuitBadge({ circuitType }: { circuitType: StoredVerification['circui
 function OnChainStatus({ confirmed }: { confirmed?: boolean }) {
   if (confirmed === true) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-green-900/50 px-2.5 py-0.5 text-xs font-medium text-green-300">
-        <span aria-hidden="true">{'\u2713'}</span>
-        Confirmed on-chain
+      <span className="badge badge-confirmed flex items-center gap-1">
+        Confirmed
       </span>
     );
   }
   if (confirmed === false) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-full bg-yellow-900/50 px-2.5 py-0.5 text-xs font-medium text-yellow-300">
+      <span className="badge badge-pending">
         Pending
       </span>
     );
   }
-  // confirmed === undefined -- not yet enriched
   return (
-    <span className="inline-flex animate-pulse items-center gap-1 rounded-full bg-gray-800 px-2.5 py-0.5 text-xs font-medium text-gray-400">
+    <span className="badge badge-checking">
       Checking...
     </span>
   );
 }
 
-function VerificationCard({ verification }: { verification: StoredVerification }) {
+function VerificationCard({ verification, index }: { verification: StoredVerification; index: number }) {
   const starkscanUrl = `https://sepolia.starkscan.co/tx/${verification.txHash}`;
   const timestamp = new Date(verification.timestamp).toLocaleString();
+  const isAge = verification.circuitType === 'age_verify';
 
   return (
-    <div className="rounded-xl border border-gray-800 bg-gray-900 p-5 space-y-3">
+    <div
+      className="brutal-card p-5 space-y-4 animate-fade-in-up"
+      style={{
+        animationDelay: `${index * 0.04}s`,
+        borderLeftWidth: '4px',
+        borderLeftColor: isAge ? 'var(--color-cyan)' : 'var(--color-accent-2)',
+      }}
+    >
       {/* Header */}
       <div className="flex items-center justify-between">
         <CircuitBadge circuitType={verification.circuitType} />
@@ -67,30 +89,33 @@ function VerificationCard({ verification }: { verification: StoredVerification }
       </div>
 
       {/* Details */}
-      <div className="space-y-2 text-sm">
-        <div className="flex justify-between">
-          <span className="text-gray-500">Nullifier</span>
-          <span className="font-mono text-gray-300">
+      <div className="space-y-0">
+        <div className="data-row">
+          <div className="space-y-0.5">
+            <span className="text-xs font-bold uppercase text-[var(--color-text-3)]">Nullifier</span>
+            <p className="text-[10px] text-[var(--color-text-3)]">Unique proof identifier</p>
+          </div>
+          <span className="font-mono text-xs text-[var(--color-text-2)]">
             {truncateHex(verification.nullifier)}
           </span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-gray-500">Attribute Key</span>
-          <span className="font-mono text-gray-300">
-            {truncateHex(verification.attributeKey)}
+        <div className="data-row">
+          <span className="text-xs font-bold uppercase text-[var(--color-text-3)]">Attribute Key</span>
+          <span className="font-mono text-xs text-[var(--color-text-2)]">
+            {formatAttributeKey(verification.attributeKey)}
           </span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-gray-500">
+        <div className="data-row">
+          <span className="text-xs font-bold uppercase text-[var(--color-text-3)]">
             {verification.circuitType === 'age_verify' ? 'Threshold' : 'Set Hash'}
           </span>
-          <span className="font-mono text-gray-300">
-            {truncateHex(verification.threshold)}
+          <span className="font-mono text-xs text-[var(--color-text-2)]">
+            {formatThresholdOrSetHash(verification.circuitType, verification.threshold)}
           </span>
         </div>
-        <div className="flex justify-between">
-          <span className="text-gray-500">Timestamp</span>
-          <span className="text-gray-300">{timestamp}</span>
+        <div className="data-row">
+          <span className="text-xs font-bold uppercase text-[var(--color-text-3)]">Submitted</span>
+          <span className="text-xs text-[var(--color-text-2)] font-mono">{timestamp}</span>
         </div>
       </div>
 
@@ -99,14 +124,55 @@ function VerificationCard({ verification }: { verification: StoredVerification }
         href={starkscanUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex items-center gap-1 text-sm text-violet-400 transition hover:text-violet-300"
+        className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[var(--color-cyan)] transition-colors duration-150 hover:text-[var(--color-accent)]"
       >
         View on Starkscan
-        <span aria-hidden="true">{'\u2197'}</span>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+          <polyline points="15 3 21 3 21 9" />
+          <line x1="10" y1="14" x2="21" y2="3" />
+        </svg>
       </a>
     </div>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Stats row
+// ---------------------------------------------------------------------------
+
+function StatsRow({ verifications }: { verifications: StoredVerification[] }) {
+  const total = verifications.length;
+  const confirmed = verifications.filter((v) => v.confirmed === true).length;
+  const ageCount = verifications.filter((v) => v.circuitType === 'age_verify').length;
+  const membershipCount = verifications.filter((v) => v.circuitType === 'membership_proof').length;
+
+  const stats = [
+    { label: 'Total Proofs', value: total, color: 'var(--color-accent)' },
+    { label: 'Confirmed', value: confirmed, color: 'var(--color-green)' },
+    { label: 'Age Proofs', value: ageCount, color: 'var(--color-cyan)' },
+    { label: 'Membership', value: membershipCount, color: 'var(--color-accent-2)' },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {stats.map((stat, i) => (
+        <div
+          key={stat.label}
+          className="brutal-card-static p-4 space-y-2 animate-fade-in"
+          style={{ animationDelay: `${i * 0.03}s`, borderTopWidth: '3px', borderTopColor: stat.color }}
+        >
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-text-3)]">{stat.label}</span>
+          <p className="text-3xl font-extrabold" style={{ color: stat.color }}>{stat.value}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
 
 export default function VerificationDashboard() {
   const { verifications, loading, clearHistory } = useVerifications();
@@ -120,76 +186,108 @@ export default function VerificationDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20 text-gray-400">
-        Loading verifications...
+      <div className="flex flex-col items-center justify-center py-24 gap-4">
+        <div className="h-8 w-8 border-3 border-[var(--color-border-hard)] border-t-[var(--color-accent)] animate-spin" />
+        <span className="text-xs font-mono uppercase tracking-widest text-[var(--color-text-3)]">Loading verifications...</span>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-fade-in-up">
       {/* Header */}
-      <div>
-        <h2 className="text-xl font-semibold text-gray-100">
+      <div className="space-y-3">
+        <span className="section-label">// Dashboard</span>
+        <h2 className="text-3xl font-extrabold uppercase text-[var(--color-text)]">
           Verification Dashboard
         </h2>
-        <p className="mt-1 text-sm text-gray-400">
-          Your past proof verifications
+        <p className="text-sm text-[var(--color-text-2)]">
+          Track your proof submissions and their on-chain confirmation status.
+          Confirmed proofs are permanently recorded on Starknet Sepolia.
+        </p>
+        <p className="text-xs text-[var(--color-text-3)] font-mono leading-relaxed">
+          Integration note: downstream dApps should validate the stored threshold (age) or set-hash (membership) as part of their access policy.
         </p>
       </div>
 
+      {/* Stats */}
+      {verifications.length > 0 && (
+        <StatsRow verifications={verifications} />
+      )}
+
       {/* Empty state */}
       {verifications.length === 0 && (
-        <div className="py-16 text-center">
-          <p className="text-gray-500">
-            No verifications yet. Generate and submit a proof to see it here.
-          </p>
-          <button
-            onClick={() => navigate('/prove')}
-            className="mt-4 rounded-lg bg-violet-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-violet-500"
-          >
-            Generate a Proof
-          </button>
+        <div className="brutal-card-static p-12 text-center space-y-5 animate-fade-in">
+          <div className="space-y-3">
+            <p className="text-sm font-bold uppercase text-[var(--color-text-2)]">No verifications yet</p>
+            <p className="text-xs text-[var(--color-text-3)] font-mono leading-relaxed max-w-md mx-auto">
+              Once you generate a proof and submit it on-chain, your verification history will appear here
+              with real-time on-chain confirmation status.
+            </p>
+          </div>
+          <div className="flex items-center justify-center gap-3">
+            <button
+              onClick={() => navigate('/prove')}
+              className="btn-primary flex items-center gap-2"
+            >
+              Generate a Proof
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="btn-secondary flex items-center gap-2 !text-xs"
+            >
+              View Credentials
+            </button>
+          </div>
         </div>
       )}
 
       {/* Verification cards */}
       {verifications.length > 0 && (
         <>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-5 sm:grid-cols-2">
             {verifications.map((v, idx) => (
-              <VerificationCard key={`${v.txHash}-${idx}`} verification={v} />
+              <VerificationCard key={`${v.txHash}-${idx}`} verification={v} index={idx} />
             ))}
           </div>
 
-          {/* Clear history */}
-          <div className="border-t border-gray-800 pt-4">
-            {!showConfirm ? (
-              <button
-                onClick={() => setShowConfirm(true)}
-                className="rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-sm text-gray-400 transition hover:border-red-700/40 hover:text-red-300"
-              >
-                Clear History
-              </button>
-            ) : (
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-gray-400">
-                  Are you sure? This cannot be undone.
-                </span>
+          {/* Actions */}
+          <div className="separator" />
+          <div className="pt-2 flex items-center justify-between">
+            <div>
+              {!showConfirm ? (
                 <button
-                  onClick={handleClearHistory}
-                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-500"
+                  onClick={() => setShowConfirm(true)}
+                  className="btn-secondary flex items-center gap-2 !text-xs"
                 >
-                  Yes, Clear All
+                  Clear History
                 </button>
-                <button
-                  onClick={() => setShowConfirm(false)}
-                  className="rounded-lg border border-gray-700 bg-gray-800 px-4 py-2 text-sm text-gray-400 transition hover:text-gray-200"
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
+              ) : (
+                <div className="flex items-center gap-3 animate-fade-in">
+                  <span className="text-xs text-[var(--color-text-2)] font-mono">
+                    Are you sure? This cannot be undone.
+                  </span>
+                  <button
+                    onClick={handleClearHistory}
+                    className="btn-danger !py-2 !px-4 !text-xs"
+                  >
+                    Yes, Clear All
+                  </button>
+                  <button
+                    onClick={() => setShowConfirm(false)}
+                    className="btn-secondary !py-2 !px-4 !text-xs"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => navigate('/')}
+              className="text-xs font-bold uppercase tracking-wide text-[var(--color-text-3)] hover:text-[var(--color-accent)] transition-colors"
+            >
+              Back to Credentials
+            </button>
           </div>
         </>
       )}

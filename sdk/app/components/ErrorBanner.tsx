@@ -105,21 +105,34 @@ export default function ErrorBanner({ error, onDismiss }: ErrorBannerProps) {
   return (
     <div
       role="alert"
-      className="relative rounded-lg border border-red-700/40 bg-red-950/30 px-4 py-3 text-red-300"
+      className="brutal-card-static animate-fade-in overflow-hidden"
+      style={{ borderLeftWidth: '4px', borderLeftColor: 'var(--color-red)' }}
     >
-      {onDismiss && (
-        <button
-          onClick={onDismiss}
-          className="absolute right-3 top-3 text-red-400 transition hover:text-red-200"
-          aria-label="Dismiss error"
-        >
-          &times;
-        </button>
-      )}
-      <div className="pr-6 space-y-1">
-        <p className="text-sm font-semibold">{classified.title}</p>
-        <p className="text-sm">{classified.message}</p>
-        <p className="text-sm text-red-200">{classified.action}</p>
+      <div className="flex items-start gap-4 p-5">
+        <div className="flex-1 min-w-0 space-y-2">
+          <p className="text-sm font-bold uppercase tracking-wide text-[var(--color-red)]">
+            {classified.title}
+          </p>
+          <p className="text-xs text-[var(--color-text-2)] leading-relaxed font-mono">
+            {classified.message}
+          </p>
+          <p className="text-xs text-[var(--color-red)] flex items-center gap-1.5 font-medium">
+            &rarr; {classified.action}
+          </p>
+        </div>
+
+        {onDismiss && (
+          <button
+            onClick={onDismiss}
+            className="shrink-0 p-1.5 text-[var(--color-text-3)] transition-colors duration-150 hover:text-[var(--color-red)]"
+            aria-label="Dismiss error"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   );
