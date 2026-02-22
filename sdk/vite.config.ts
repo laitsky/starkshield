@@ -41,6 +41,18 @@ export default defineConfig({
   },
   build: {
     target: 'esnext',
+    chunkSizeWarningLimit: 9000,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/@aztec/bb.js')) return 'zk-bbjs';
+          if (id.includes('node_modules/@noir-lang/')) return 'zk-noir';
+          if (id.includes('node_modules/garaga')) return 'zk-garaga';
+          if (id.includes('node_modules/starknet')) return 'starknet-core';
+          return undefined;
+        },
+      },
+    },
   },
   assetsInclude: ['**/*.wasm'],
 });
