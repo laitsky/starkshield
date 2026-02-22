@@ -23,9 +23,9 @@ pub trait IStarkShieldRegistry<TContractState> {
     );
     fn is_nullifier_used(self: @TContractState, nullifier: u256) -> bool;
     fn get_verification_record(self: @TContractState, nullifier: u256) -> VerificationRecord;
-    fn add_trusted_issuer(ref self: TContractState, issuer_pub_key_x: u256);
+    fn add_trusted_issuer(ref self: TContractState, issuer_pub_key_x: u256, issuer_pub_key_y: u256);
     fn remove_trusted_issuer(ref self: TContractState, issuer_pub_key_x: u256);
-    fn is_trusted_issuer(self: @TContractState, issuer_pub_key_x: u256) -> bool;
+    fn is_trusted_issuer(self: @TContractState, issuer_pub_key_x: u256, issuer_pub_key_y: u256) -> bool;
 }
 
 #[derive(Drop, Copy, Serde, starknet::Store)]
@@ -56,11 +56,15 @@ pub mod StarkShieldRegistry {
         verifiers: Map<u8, ContractAddress>,
         // issuer_pub_key_x -> is_trusted
         trusted_issuers: Map<u256, bool>,
+        // issuer_pub_key_x -> issuer_pub_key_y
+        trusted_issuer_pub_key_y: Map<u256, u256>,
         // nullifier -> is_used
         nullifier_used: Map<u256, bool>,
         // nullifier -> VerificationRecord
         verification_records: Map<u256, VerificationRecord>,
     }
+
+    const MAX_PROOF_TIMESTAMP_SKEW_SECS: u64 = 300;
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -132,42 +136,77 @@ pub mod StarkShieldRegistry {
                 Result::Err(_) => panic!("Proof verification failed"),
             };
 
-            // Step 3: Extract fields by circuit_id
+            // Step 3: Validate verifier output shape by circuit type
+            if circuit_id == 0 {
+                assert(public_inputs.len() == 8, 'Invalid age public inputs');
+            } else if circuit_id == 1 {
+                assert(public_inputs.len() == 15, 'Bad member pub inputs');
+            } else {
+                panic!("Unsupported circuit_id")
+            }
+
+            // Step 4: Bind proof timestamp to on-chain time to prevent expiry bypass
+            // Both circuits expose current_timestamp at public input index 2.
+            let proof_timestamp = *public_inputs.at(2);
+            assert(proof_timestamp.high == 0, 'Invalid current_timestamp');
+
+            let block_timestamp = get_block_timestamp();
+            let upper_bound: u128 = (block_timestamp + MAX_PROOF_TIMESTAMP_SKEW_SECS).into();
+            let lower_bound: u128 = if block_timestamp > MAX_PROOF_TIMESTAMP_SKEW_SECS {
+                (block_timestamp - MAX_PROOF_TIMESTAMP_SKEW_SECS).into()
+            } else {
+                0
+            };
+            assert(proof_timestamp.low >= lower_bound, 'Proof timestamp too old');
+            assert(proof_timestamp.low <= upper_bound, 'Proof timestamp too new');
+
+            // Step 5: Extract fields by circuit_id
             //
-            // age_verify (circuit_id 0, 9 public inputs):
-            //   Index 5: nullifier, 6: issuer_pub_key_x, 7: attribute_key, 8: threshold
+            // age_verify (circuit_id 0, 8 public inputs):
+            //   Index 5: nullifier, 6: issuer_pub_key_x, 7: threshold
             //
-            // membership_proof (circuit_id 1, 16 public inputs):
-            //   Index 12: nullifier, 13: issuer_pub_key_x, 14: attribute_key, 15: allowed_set_hash
-            let (nullifier, issuer_pub_key_x, attribute_key, threshold_or_set_hash) =
+            // membership_proof (circuit_id 1, 15 public inputs):
+            //   Index 12: nullifier, 13: issuer_pub_key_x, 14: allowed_set_hash
+            let proof_pub_key_x = *public_inputs.at(0);
+            let proof_pub_key_y = *public_inputs.at(1);
+
+            let (nullifier, issuer_pub_key_x, threshold_or_set_hash) =
                 if circuit_id == 0 {
                     (
                         *public_inputs.at(5),
                         *public_inputs.at(6),
                         *public_inputs.at(7),
-                        *public_inputs.at(8),
                     )
                 } else if circuit_id == 1 {
                     (
                         *public_inputs.at(12),
                         *public_inputs.at(13),
                         *public_inputs.at(14),
-                        *public_inputs.at(15),
                     )
                 } else {
                     panic!("Unsupported circuit_id")
                 };
 
-            // Step 4: Enforce trusted issuer
-            assert(self.trusted_issuers.entry(issuer_pub_key_x).read(), 'Issuer not trusted');
+            // Step 6: Derive circuit-specific attribute semantics from circuit_id.
+            let attribute_key = if circuit_id == 0 {
+                u256 { low: 1, high: 0 }
+            } else {
+                u256 { low: 2, high: 0 }
+            };
 
-            // Step 5: Enforce nullifier uniqueness (replay protection)
+            // Step 7: Enforce issuer key consistency and trust list checks
+            assert(issuer_pub_key_x == proof_pub_key_x, 'Issuer key mismatch');
+            assert(self.trusted_issuers.entry(issuer_pub_key_x).read(), 'Issuer not trusted');
+            let trusted_pub_key_y = self.trusted_issuer_pub_key_y.entry(issuer_pub_key_x).read();
+            assert(trusted_pub_key_y == proof_pub_key_y, 'Issuer key mismatch');
+
+            // Step 8: Enforce nullifier uniqueness (replay protection)
             assert(!self.nullifier_used.entry(nullifier).read(), 'Nullifier already used');
 
-            // Step 6: Mark nullifier as used
+            // Step 9: Mark nullifier as used
             self.nullifier_used.entry(nullifier).write(true);
 
-            // Step 7: Store verification record
+            // Step 10: Store verification record
             let timestamp = get_block_timestamp();
             let record = VerificationRecord {
                 nullifier,
@@ -178,7 +217,7 @@ pub mod StarkShieldRegistry {
             };
             self.verification_records.entry(nullifier).write(record);
 
-            // Step 8: Emit event
+            // Step 11: Emit event
             self.emit(VerificationPassed {
                 nullifier,
                 attribute_key,
@@ -196,20 +235,27 @@ pub mod StarkShieldRegistry {
             self.verification_records.entry(nullifier).read()
         }
 
-        fn add_trusted_issuer(ref self: ContractState, issuer_pub_key_x: u256) {
+        fn add_trusted_issuer(ref self: ContractState, issuer_pub_key_x: u256, issuer_pub_key_y: u256) {
             assert_only_owner(self.owner.read());
             self.trusted_issuers.entry(issuer_pub_key_x).write(true);
+            self.trusted_issuer_pub_key_y.entry(issuer_pub_key_x).write(issuer_pub_key_y);
             self.emit(TrustedIssuerAdded { issuer_pub_key_x });
         }
 
         fn remove_trusted_issuer(ref self: ContractState, issuer_pub_key_x: u256) {
             assert_only_owner(self.owner.read());
             self.trusted_issuers.entry(issuer_pub_key_x).write(false);
+            self.trusted_issuer_pub_key_y.entry(issuer_pub_key_x).write(u256 { low: 0, high: 0 });
             self.emit(TrustedIssuerRemoved { issuer_pub_key_x });
         }
 
-        fn is_trusted_issuer(self: @ContractState, issuer_pub_key_x: u256) -> bool {
-            self.trusted_issuers.entry(issuer_pub_key_x).read()
+        fn is_trusted_issuer(self: @ContractState, issuer_pub_key_x: u256, issuer_pub_key_y: u256) -> bool {
+            if !self.trusted_issuers.entry(issuer_pub_key_x).read() {
+                false
+            } else {
+                let stored_y = self.trusted_issuer_pub_key_y.entry(issuer_pub_key_x).read();
+                stored_y == issuer_pub_key_y
+            }
         }
     }
 }
