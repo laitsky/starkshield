@@ -5,14 +5,17 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "issue": "npx tsx issuer.ts",
-    "issue:membership": "npx tsx issuer.ts --type membership"
+    "issue": "bun issuer.ts",
+    "issue:membership": "bun issuer.ts --type membership",
+    "typecheck": "tsc --noEmit",
+    "test": "bun run typecheck",
+    "verify": "bun run typecheck"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@aztec/bb.js": "^0.82.3"
+    "@aztec/bb.js": "0.82.3"
   },
   "devDependencies": {
     "@types/node": "^25.2.3",

@@ -2,20 +2,21 @@
  * StarkShield Demo Credential Issuer
  *
  * Generates Poseidon2-Schnorr signed credentials compatible with Noir circuits.
- * The issuer generates a Schnorr keypair on the Grumpkin curve, defines credential
- * fields, hashes them with Poseidon2, signs the hash, and outputs a JSON file
- * that can be used as witness data for circuit proving.
  *
  * Usage:
- *   npx tsx issuer.ts                    # Generate age verification credential (age=25, valid expiry)
- *   npx tsx issuer.ts --type membership  # Generate membership credential
- *   npx tsx issuer.ts --expired          # Generate expired credential (age=25, expired yesterday)
- *   npx tsx issuer.ts --young            # Generate young credential (age=15, valid expiry)
+ *   bunx tsx issuer.ts                                # age credential (default)
+ *   bunx tsx issuer.ts --type membership              # membership credential
+ *   bunx tsx issuer.ts --expired                      # expired credential
+ *   bunx tsx issuer.ts --young                        # age=15 credential
+ *   bunx tsx issuer.ts --rotate-key                   # rotate stored issuer key for this type
+ *   bunx tsx issuer.ts --issuer-private-key 0xabc...  # use explicit issuer private key
  */
 
 import { Barretenberg, Fr } from '@aztec/bb.js';
-import { writeFileSync } from 'fs';
+import { existsSync, readFileSync, writeFileSync } from 'fs';
 import { randomBytes } from 'crypto';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 // Credential types
 const CREDENTIAL_TYPE_AGE = 0n;
@@ -24,6 +25,21 @@ const CREDENTIAL_TYPE_MEMBERSHIP = 1n;
 // Attribute keys
 const ATTR_KEY_AGE = 1n;
 const ATTR_KEY_MEMBERSHIP_GROUP = 2n;
+
+type CredentialMode = 'age' | 'membership';
+
+interface CliOptions {
+  mode: CredentialMode;
+  expired: boolean;
+  young: boolean;
+  rotateKey: boolean;
+  issuerPrivateKeyHex?: string;
+}
+
+interface IssuerKeyStore {
+  version: 1;
+  keys: Partial<Record<CredentialMode, string>>;
+}
 
 interface CredentialOutput {
   subject_id: string;
@@ -42,32 +58,184 @@ interface CredentialOutput {
   dapp_context_id: string;
 }
 
+interface DeploymentsTrustedIssuers {
+  age_demo_issuer_pub_key_x?: string;
+  membership_demo_issuer_pub_key_x?: string;
+}
+
+const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
+const KEY_STORE_PATH = path.join(SCRIPT_DIR, '.issuer_keys.json');
+const DEPLOYMENTS_PATH = path.join(SCRIPT_DIR, '..', 'deployments.json');
+
+export function parseCliOptions(argv: string[]): CliOptions {
+  const membershipTypeIndex = argv.indexOf('--type');
+  const isMembership =
+    membershipTypeIndex !== -1 && argv[membershipTypeIndex + 1] === 'membership';
+
+  const issuerPrivateKeyIndex = argv.indexOf('--issuer-private-key');
+  const issuerPrivateKeyHex =
+    issuerPrivateKeyIndex !== -1
+      ? argv[issuerPrivateKeyIndex + 1]
+      : undefined;
+
+  return {
+    mode: isMembership ? 'membership' : 'age',
+    expired: argv.includes('--expired'),
+    young: argv.includes('--young'),
+    rotateKey: argv.includes('--rotate-key'),
+    issuerPrivateKeyHex,
+  };
+}
+
+function normalizeHex(value: string, label: string): string {
+  try {
+    const parsed = BigInt(value);
+    if (parsed <= 0n) {
+      throw new Error(`${label} must be non-zero`);
+    }
+    const max256 = (1n << 256n) - 1n;
+    if (parsed > max256) {
+      throw new Error(`${label} must fit in 32 bytes`);
+    }
+    return `0x${parsed.toString(16).padStart(64, '0')}`;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`Invalid ${label}: ${detail}`);
+  }
+}
+
+function compareHex(a: string, b: string): boolean {
+  return BigInt(a) === BigInt(b);
+}
+
+function randomPrivateKeyHex(): string {
+  let bytes = randomBytes(32);
+  bytes[0] = bytes[0]! & 0x0f;
+
+  while (bytes.every((byte) => byte === 0)) {
+    bytes = randomBytes(32);
+    bytes[0] = bytes[0]! & 0x0f;
+  }
+
+  return normalizeHex(`0x${bytes.toString('hex')}`, 'issuer private key');
+}
+
+function loadKeyStore(): IssuerKeyStore {
+  if (!existsSync(KEY_STORE_PATH)) {
+    return { version: 1, keys: {} };
+  }
+
+  try {
+    const raw = readFileSync(KEY_STORE_PATH, 'utf-8');
+    const parsed = JSON.parse(raw) as IssuerKeyStore;
+    if (parsed.version !== 1 || typeof parsed.keys !== 'object') {
+      return { version: 1, keys: {} };
+    }
+    return parsed;
+  } catch {
+    return { version: 1, keys: {} };
+  }
+}
+
+function saveKeyStore(store: IssuerKeyStore): void {
+  writeFileSync(KEY_STORE_PATH, JSON.stringify(store, null, 2));
+}
+
+function resolveIssuerPrivateKey(
+  options: CliOptions,
+): { privateKeyHex: string; source: 'cli' | 'store' | 'generated' } {
+  if (options.issuerPrivateKeyHex) {
+    const normalized = normalizeHex(options.issuerPrivateKeyHex, 'issuer private key');
+    const store = loadKeyStore();
+    store.keys[options.mode] = normalized;
+    saveKeyStore(store);
+    return { privateKeyHex: normalized, source: 'cli' };
+  }
+
+  const store = loadKeyStore();
+  if (!options.rotateKey && store.keys[options.mode]) {
+    const normalized = normalizeHex(
+      store.keys[options.mode]!,
+      `${options.mode} issuer private key`,
+    );
+    return { privateKeyHex: normalized, source: 'store' };
+  }
+
+  const generated = randomPrivateKeyHex();
+  store.keys[options.mode] = generated;
+  saveKeyStore(store);
+  return { privateKeyHex: generated, source: 'generated' };
+}
+
+function privateKeyBytesFromHex(hex: string): Uint8Array {
+  const value = BigInt(hex);
+  const bytes = new Uint8Array(32);
+  let remaining = value;
+
+  for (let i = 31; i >= 0; i--) {
+    bytes[i] = Number(remaining & 0xffn);
+    remaining >>= 8n;
+  }
+
+  return bytes;
+}
+
+function loadTrustedIssuerPublicKeyX(mode: CredentialMode): string | undefined {
+  if (!existsSync(DEPLOYMENTS_PATH)) return undefined;
+
+  try {
+    const raw = readFileSync(DEPLOYMENTS_PATH, 'utf-8');
+    const deployments = JSON.parse(raw) as { trusted_issuers?: DeploymentsTrustedIssuers };
+    if (!deployments.trusted_issuers) return undefined;
+
+    return mode === 'age'
+      ? deployments.trusted_issuers.age_demo_issuer_pub_key_x
+      : deployments.trusted_issuers.membership_demo_issuer_pub_key_x;
+  } catch {
+    return undefined;
+  }
+}
+
 async function main() {
-  const isMembership = process.argv.includes('--type') &&
-    process.argv[process.argv.indexOf('--type') + 1] === 'membership';
-  const isExpired = process.argv.includes('--expired');
-  const isYoung = process.argv.includes('--young');
+  const options = parseCliOptions(process.argv);
+  const isMembership = options.mode === 'membership';
 
   const typeLabel = isMembership ? 'membership' : 'age verification';
   const modifiers = [
-    isExpired ? 'expired' : '',
-    isYoung ? 'young (age=15)' : '',
-  ].filter(Boolean).join(', ');
+    options.expired ? 'expired' : '',
+    options.young ? 'young (age=15)' : '',
+  ]
+    .filter(Boolean)
+    .join(', ');
   console.log(`Generating ${typeLabel} credential${modifiers ? ` (${modifiers})` : ''}...`);
+
+  const keyResolution = resolveIssuerPrivateKey(options);
+  const privateKeyHex = keyResolution.privateKeyHex;
+  const privateKey = new Fr(privateKeyBytesFromHex(privateKeyHex));
+
+  console.log(
+    `Issuer key source: ${keyResolution.source} (${KEY_STORE_PATH})`,
+  );
 
   // Initialize Barretenberg
   const bb = await Barretenberg.new({ threads: 1 });
 
   try {
     // Generate Schnorr keypair on Grumpkin curve
-    // The private key is an Fr element (BN254 scalar field)
-    const privateKeyBytes = randomBytes(32);
-    // Ensure the private key is a valid scalar (non-zero, less than field modulus)
-    privateKeyBytes[0] = privateKeyBytes[0]! & 0x0f; // Ensure top bits are clear for valid scalar
-    const privateKey = new Fr(privateKeyBytes);
     const publicKey = await bb.schnorrComputePublicKey(privateKey);
-
     console.log(`Issuer public key: (${publicKey.x.toString()}, ${publicKey.y.toString()})`);
+
+    const trustedPubKeyX = loadTrustedIssuerPublicKeyX(options.mode);
+    if (trustedPubKeyX) {
+      const matchesTrusted = compareHex(publicKey.x.toString(), trustedPubKeyX);
+      if (matchesTrusted) {
+        console.log('Issuer matches deployed trusted demo issuer: YES');
+      } else {
+        console.warn(
+          'WARNING: Issuer key does not match deployed trusted demo issuer. On-chain submission will fail unless the registry owner adds this issuer.',
+        );
+      }
+    }
 
     // Generate random subject_id and secret_salt
     const subjectId = Fr.random();
@@ -76,9 +244,7 @@ async function main() {
     // Set credential fields based on type
     const now = BigInt(Math.floor(Date.now() / 1000));
     const oneYearFromNow = now + 86400n * 365n;
-
-    // --expired: set expires_at to yesterday instead of +1 year
-    const expiresAt = isExpired ? (now - 86400n) : oneYearFromNow;
+    const expiresAt = options.expired ? now - 86400n : oneYearFromNow;
 
     let credentialType: bigint;
     let attributeKey: bigint;
@@ -91,8 +257,7 @@ async function main() {
     } else {
       credentialType = CREDENTIAL_TYPE_AGE;
       attributeKey = ATTR_KEY_AGE;
-      // --young: set age to 15 instead of 25
-      attributeValue = isYoung ? 15n : 25n;
+      attributeValue = options.young ? 15n : 25n;
     }
 
     // Use the public key x-coordinate as issuer_id (deterministic, on-chain verifiable)
@@ -105,7 +270,6 @@ async function main() {
     const expiresAtFr = new Fr(expiresAt);
 
     // Hash credential fields with Poseidon2
-    // CRITICAL: This hash MUST match what the Noir circuit computes via Poseidon2::hash(fields, 8)
     const credentialFields = [
       subjectId,
       issuerId,
@@ -121,18 +285,15 @@ async function main() {
     console.log(`Credential hash: ${credentialHash.toString()}`);
 
     // Sign the credential hash with Schnorr
-    // The message for signing is the credential hash as 32 big-endian bytes
     const messageBytes = credentialHash.toBuffer();
     const [sigS, sigE] = await bb.schnorrConstructSignature(messageBytes, privateKey);
 
-    // Verify the signature locally to ensure correctness
     const verified = await bb.schnorrVerifySignature(messageBytes, publicKey, sigS, sigE);
     if (!verified) {
       throw new Error('Signature verification failed locally -- this should not happen');
     }
     console.log('Signature verified locally: OK');
 
-    // Combine sigS + sigE into a single 64-byte array matching Noir's [u8; 64]
     // Noir schnorr expects: bytes 0-31 = s, bytes 32-63 = e
     const sigSBytes = sigS.toBuffer();
     const sigEBytes = sigE.toBuffer();
@@ -145,7 +306,7 @@ async function main() {
     }
 
     // Compute nullifier for a test dApp context
-    const dappContextId = new Fr(42n); // test dApp ID
+    const dappContextId = new Fr(42n);
     const nullifier = await bb.poseidon2Hash([secretSalt, credentialHash, dappContextId]);
     console.log(`Nullifier (dApp 42): ${nullifier.toString()}`);
 
@@ -170,14 +331,13 @@ async function main() {
     // Write output file
     const filename = isMembership ? 'demo_credential_membership.json' : 'demo_credential.json';
     writeFileSync(filename, JSON.stringify(credential, null, 2));
-    console.log(`\nDemo credential written to ${filename}`);
+    console.log(`Demo credential written to ${filename}`);
 
     // Also generate Prover.toml format for Noir circuit
     const proverToml = generateProverToml(credential, isMembership);
     const proverFilename = isMembership ? 'prover_membership.toml' : 'prover_age.toml';
     writeFileSync(proverFilename, proverToml);
     console.log(`Prover.toml written to ${proverFilename}`);
-
   } finally {
     await bb.destroy();
   }
@@ -194,43 +354,46 @@ function generateProverToml(cred: CredentialOutput, isMembership: boolean): stri
   lines.push(`expires_at = "${cred.expires_at}"`);
   lines.push(`secret_salt = "${cred.secret_salt}"`);
 
-  // Format signature as TOML array of strings
-  const sigStrs = cred.signature.map(b => `"${b}"`);
+  const sigStrs = cred.signature.map((b) => `"${b}"`);
   lines.push(`signature = [${sigStrs.join(', ')}]`);
 
   lines.push(`pub_key_x = "${cred.issuer_pub_key_x}"`);
   lines.push(`pub_key_y = "${cred.issuer_pub_key_y}"`);
 
-  // Public inputs: timestamp and dapp context
   const currentTimestamp = BigInt(Math.floor(Date.now() / 1000));
   const tsFr = new Fr(currentTimestamp);
   lines.push(`current_timestamp = "${tsFr.toString()}"`);
   lines.push(`dapp_context_id = "${cred.dapp_context_id}"`);
 
   if (isMembership) {
-    // Membership circuit: allowed_set instead of threshold
-    // Include the credential's attribute_value plus additional group IDs, zero-padded to 8
     const allowedSet = [
-      cred.attribute_value, // The credential's value (e.g., group ID 100)
-      "0x00000000000000000000000000000000000000000000000000000000000000c8", // 200
-      "0x000000000000000000000000000000000000000000000000000000000000012c", // 300
-      "0x0000000000000000000000000000000000000000000000000000000000000000", // padding
-      "0x0000000000000000000000000000000000000000000000000000000000000000",
-      "0x0000000000000000000000000000000000000000000000000000000000000000",
-      "0x0000000000000000000000000000000000000000000000000000000000000000",
-      "0x0000000000000000000000000000000000000000000000000000000000000000",
+      cred.attribute_value,
+      '0x00000000000000000000000000000000000000000000000000000000000000c8',
+      '0x000000000000000000000000000000000000000000000000000000000000012c',
+      '0x0000000000000000000000000000000000000000000000000000000000000000',
+      '0x0000000000000000000000000000000000000000000000000000000000000000',
+      '0x0000000000000000000000000000000000000000000000000000000000000000',
+      '0x0000000000000000000000000000000000000000000000000000000000000000',
+      '0x0000000000000000000000000000000000000000000000000000000000000000',
     ];
-    lines.push(`allowed_set = [${allowedSet.map(v => `"${v}"`).join(', ')}]`);
+    lines.push(`allowed_set = [${allowedSet.map((v) => `"${v}"`).join(', ')}]`);
   } else {
-    // Age circuit: threshold
-    lines.push(`threshold = "0x0000000000000000000000000000000000000000000000000000000000000012"`); // 18
+    lines.push(
+      'threshold = "0x0000000000000000000000000000000000000000000000000000000000000012"',
+    );
   }
 
   lines.push('');
   return lines.join('\n');
 }
 
-main().catch((err) => {
-  console.error('Error:', err);
-  process.exit(1);
-});
+const isMainModule =
+  !!process.argv[1] &&
+  path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
+
+if (isMainModule) {
+  main().catch((err) => {
+    console.error('Error:', err);
+    process.exit(1);
+  });
+}
