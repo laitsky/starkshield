@@ -6,6 +6,7 @@ import Layout from './components/Layout';
 const CredentialWallet = lazy(() => import('./views/CredentialWallet'));
 const ProofGenerator = lazy(() => import('./views/ProofGenerator'));
 const VerificationDashboard = lazy(() => import('./views/VerificationDashboard'));
+const HowItWorks = lazy(() => import('./views/HowItWorks'));
 
 const LoadingFallback = () => (
   <div className="flex flex-col items-center justify-center py-24 gap-4">
@@ -39,6 +40,14 @@ const router = createBrowserRouter([
         element: (
           <Suspense fallback={<LoadingFallback />}>
             <VerificationDashboard />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'how-it-works',
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <HowItWorks />
           </Suspense>
         ),
       },

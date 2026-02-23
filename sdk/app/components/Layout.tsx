@@ -6,6 +6,7 @@ const navLinks = [
   { to: '/', label: 'Credentials', end: true },
   { to: '/prove', label: 'Prove' },
   { to: '/dashboard', label: 'Dashboard' },
+  { to: '/how-it-works', label: 'How It Works' },
 ];
 
 export default function Layout() {
@@ -111,46 +112,11 @@ export default function Layout() {
             {/* Link columns */}
             <div className="flex gap-12">
               <div className="space-y-3">
-                <span className="section-label">// Protocol</span>
+                <span className="section-label">// Links</span>
                 <ul className="space-y-2">
                   <li>
                     <a
-                      href="https://www.starknet.io/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-bold uppercase tracking-wide text-[var(--color-text-2)] transition-colors duration-150 hover:text-[var(--color-cyan)]"
-                    >
-                      Starknet
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="https://noir-lang.org/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-bold uppercase tracking-wide text-[var(--color-text-2)] transition-colors duration-150 hover:text-[var(--color-cyan)]"
-                    >
-                      Noir
-                    </a>
-                  </li>
-                  <li>
-                    <a
-                      href="https://sepolia.starkscan.co/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-bold uppercase tracking-wide text-[var(--color-text-2)] transition-colors duration-150 hover:text-[var(--color-cyan)]"
-                    >
-                      Starkscan
-                    </a>
-                  </li>
-                </ul>
-              </div>
-              <div className="space-y-3">
-                <span className="section-label">// Project</span>
-                <ul className="space-y-2">
-                  <li>
-                    <a
-                      href="https://github.com/anthropics"
+                      href="https://github.com/laitsky/starkshield"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs font-bold uppercase tracking-wide text-[var(--color-text-2)] transition-colors duration-150 hover:text-[var(--color-cyan)]"
@@ -160,18 +126,18 @@ export default function Layout() {
                   </li>
                   <li>
                     <NavLink
-                      to="/"
+                      to="/dashboard"
                       className="text-xs font-bold uppercase tracking-wide text-[var(--color-text-2)] transition-colors duration-150 hover:text-[var(--color-cyan)]"
                     >
-                      Credentials
+                      Dashboard
                     </NavLink>
                   </li>
                   <li>
                     <NavLink
-                      to="/prove"
+                      to="/how-it-works"
                       className="text-xs font-bold uppercase tracking-wide text-[var(--color-text-2)] transition-colors duration-150 hover:text-[var(--color-cyan)]"
                     >
-                      Prove
+                      How It Works
                     </NavLink>
                   </li>
                 </ul>
