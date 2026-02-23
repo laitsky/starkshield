@@ -19,6 +19,7 @@ import type {
   AgeProofParams,
   MembershipProofParams,
 } from '../../src/index';
+import { buildVoyagerTxUrl } from '../explorer';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -1029,7 +1030,7 @@ export default function ProofGenerator() {
               <span className="text-xs font-bold uppercase text-[var(--color-text-3)]">Transaction Hash</span>
               <span className="flex items-center">
                 <a
-                  href={`https://sepolia.starkscan.co/tx/${submitResult.transactionHash}`}
+                  href={buildVoyagerTxUrl(submitResult.transactionHash)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 font-mono text-xs text-[var(--color-cyan)] transition-colors duration-150 hover:text-[var(--color-accent)]"

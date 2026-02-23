@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVerifications } from '../hooks/useVerifications';
 import type { StoredVerification } from '../hooks/useVerifications';
+import { buildVoyagerTxUrl } from '../explorer';
 
 function truncateHex(hex: string, start = 6, end = 4): string {
   if (hex.length <= start + end + 2) return hex;
@@ -69,7 +70,7 @@ function OnChainStatus({ confirmed }: { confirmed?: boolean }) {
 }
 
 function VerificationCard({ verification, index }: { verification: StoredVerification; index: number }) {
-  const starkscanUrl = `https://sepolia.starkscan.co/tx/${verification.txHash}`;
+  const voyagerUrl = buildVoyagerTxUrl(verification.txHash);
   const timestamp = new Date(verification.timestamp).toLocaleString();
   const isAge = verification.circuitType === 'age_verify';
 
@@ -119,14 +120,14 @@ function VerificationCard({ verification, index }: { verification: StoredVerific
         </div>
       </div>
 
-      {/* Starkscan link */}
+      {/* Voyager link */}
       <a
-        href={starkscanUrl}
+        href={voyagerUrl}
         target="_blank"
         rel="noopener noreferrer"
         className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[var(--color-cyan)] transition-colors duration-150 hover:text-[var(--color-accent)]"
       >
-        View on Starkscan
+        View on Voyager
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
           <polyline points="15 3 21 3 21 9" />
