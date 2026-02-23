@@ -2,11 +2,9 @@
 
 **Prove who you are without revealing who you are.**
 
-StarkShield lets users verify things about themselves — age, group membership, KYC status — to on-chain contracts on Starknet, without handing over any personal data. Credentials live on the user's device. Only ZK proofs hit the chain.
+StarkShield lets users verify things about themselves: age, group membership, KYC status — to on-chain contracts on Starknet, without handing over any personal data. Credentials live on the user's device. Only ZK proofs hit the chain.
 
 Built for the [Starknet Re{define} Hackathon](https://dorahacks.io/) — Privacy Track.
-
-> Projects like Mist.cash and Tongo tackle **transaction privacy**. StarkShield tackles **identity privacy** — a different problem entirely.
 
 ## The Problem
 
@@ -122,9 +120,9 @@ starkshield/
 
 | Contract | Address | Explorer |
 |----------|---------|----------|
-| Registry | `0x06f4c3158eca3a5109e3b08355bd160e621eee291a9860ba716199c5e8f86f94` | [Starkscan](https://sepolia.starkscan.co/contract/0x06f4c3158eca3a5109e3b08355bd160e621eee291a9860ba716199c5e8f86f94) \| [Voyager](https://sepolia.voyager.online/contract/0x06f4c3158eca3a5109e3b08355bd160e621eee291a9860ba716199c5e8f86f94) |
-| Age Verifier | `0x06e318af5da0aecca732fd0192305f4f755582f762186aa2b253e0d43d031023` | [Starkscan](https://sepolia.starkscan.co/contract/0x06e318af5da0aecca732fd0192305f4f755582f762186aa2b253e0d43d031023) \| [Voyager](https://sepolia.voyager.online/contract/0x06e318af5da0aecca732fd0192305f4f755582f762186aa2b253e0d43d031023) |
-| Membership Verifier | `0x0209c45d1040f0e0c6893ffacc390c2734dd61b03619b50ad9888dbe8311fe17` | [Starkscan](https://sepolia.starkscan.co/contract/0x0209c45d1040f0e0c6893ffacc390c2734dd61b03619b50ad9888dbe8311fe17) \| [Voyager](https://sepolia.voyager.online/contract/0x0209c45d1040f0e0c6893ffacc390c2734dd61b03619b50ad9888dbe8311fe17) |
+| Registry | `0x06f4c3158eca3a5109e3b08355bd160e621eee291a9860ba716199c5e8f86f94` | [Voyager](https://sepolia.voyager.online/contract/0x06f4c3158eca3a5109e3b08355bd160e621eee291a9860ba716199c5e8f86f94) |
+| Age Verifier | `0x06e318af5da0aecca732fd0192305f4f755582f762186aa2b253e0d43d031023` | [Voyager](https://sepolia.voyager.online/contract/0x06e318af5da0aecca732fd0192305f4f755582f762186aa2b253e0d43d031023) |
+| Membership Verifier | `0x0209c45d1040f0e0c6893ffacc390c2734dd61b03619b50ad9888dbe8311fe17` | [Voyager](https://sepolia.voyager.online/contract/0x0209c45d1040f0e0c6893ffacc390c2734dd61b03619b50ad9888dbe8311fe17) |
 
 ## Note for Integrators
 
@@ -195,17 +193,11 @@ If your generated issuer key is not in the registry's trusted issuer list, on-ch
 
 | Metric | Value |
 |--------|-------|
-| Browser proof generation | ~15s on M1 |
+| Browser proof generation | ~6s on M1 |
 | Age circuit size | 1,224 ACIR opcodes |
 | Membership circuit size | 1,253 ACIR opcodes |
 | On-chain verification cost | ~2.25 STRK |
 
-## Hackathon Info
-
-Starknet Re{define} Hackathon — Privacy Track
-
-- Hacking period: Feb 1–28, 2026
-- Submission deadline: Feb 28, 2026 at 23:59 UTC
 
 ## License
 
