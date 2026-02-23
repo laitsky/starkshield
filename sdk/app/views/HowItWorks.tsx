@@ -127,34 +127,6 @@ export default function HowItWorks() {
         </div>
       </div>
 
-      {/* Tech Stack */}
-      <div className="space-y-4">
-        <span className="section-label">// Tech Stack</span>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="brutal-card-static p-5 space-y-2">
-            <p className="text-sm font-extrabold text-[var(--color-text)]">Noir</p>
-            <p className="text-xs text-[var(--color-text-2)] leading-relaxed">
-              Domain-specific language for writing zero-knowledge circuits. StarkShield's age and membership
-              circuits are written in Noir.
-            </p>
-          </div>
-          <div className="brutal-card-static p-5 space-y-2">
-            <p className="text-sm font-extrabold text-[var(--color-text)]">Barretenberg</p>
-            <p className="text-xs text-[var(--color-text-2)] leading-relaxed">
-              Aztec's proving backend compiled to WASM. Generates UltraPlonk proofs directly in the browser
-              with no server round-trip.
-            </p>
-          </div>
-          <div className="brutal-card-static p-5 space-y-2">
-            <p className="text-sm font-extrabold text-[var(--color-text)]">Starknet</p>
-            <p className="text-xs text-[var(--color-text-2)] leading-relaxed">
-              L2 blockchain used for on-chain proof verification and registry storage. Provides low-cost
-              transactions with Ethereum-level security.
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* CTA Footer */}
       <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 pb-10">
         <NavLink to="/" className="btn-primary text-center">
