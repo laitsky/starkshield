@@ -8,6 +8,8 @@ import ErrorBanner from '../components/ErrorBanner';
 import { useWallet } from '../hooks/useWallet';
 import {
   resolvePublicAsset,
+  isNullifierUsed,
+  getVerificationRecord,
   validateAgeCredential,
   validateMembershipCredential,
 } from '../../src/index';
@@ -69,6 +71,23 @@ function validateCredentialForProof(credential: CredentialJSON): string | null {
   return null;
 }
 
+function formatUnixTimestamp(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return 'unknown time';
+  }
+  return new Date(seconds * 1000).toLocaleString();
+}
+
+function nextTestContextId(current: number): number {
+  const candidate = Number.isFinite(current) ? Math.trunc(current) + 1 : 1;
+  if (candidate <= 0) return 1;
+  return candidate;
+}
+
+function randomTestContextId(): number {
+  return Math.floor(Math.random() * 1_000_000_000) + 1;
+}
+
 // ---------------------------------------------------------------------------
 // localStorage persistence for Verification Dashboard
 // ---------------------------------------------------------------------------
@@ -82,6 +101,11 @@ interface StoredVerification {
   timestamp: number;
   attributeKey: string;
   threshold: string;
+}
+
+interface ExistingVerificationStatus {
+  timestamp: number;
+  circuitId: number;
 }
 
 function saveVerification(v: StoredVerification): void {
@@ -325,6 +349,14 @@ export default function ProofGenerator() {
   const [dappContextId, setDappContextId] = useState(42);
   const [allowedSetInput, setAllowedSetInput] = useState('0x64, 0x65, 0x66');
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [nullifierStatus, setNullifierStatus] = useState<
+    'idle' | 'checking' | 'unused' | 'used' | 'error'
+  >('idle');
+  const [nullifierStatusError, setNullifierStatusError] = useState<string | null>(null);
+  const [existingVerification, setExistingVerification] =
+    useState<ExistingVerificationStatus | null>(null);
+  const [contextSwitchMessage, setContextSwitchMessage] = useState<string | null>(null);
+  const contextSwitchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ---- Elapsed time counter ----
   const [elapsed, setElapsed] = useState(0);
@@ -367,6 +399,15 @@ export default function ProofGenerator() {
     };
   }, [step]);
 
+  useEffect(() => {
+    return () => {
+      if (contextSwitchTimeoutRef.current) {
+        clearTimeout(contextSwitchTimeoutRef.current);
+        contextSwitchTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
   // ---- Derived ----
   const resolvedCircuitType = credential
     ? determineCircuitType(credential)
@@ -376,6 +417,7 @@ export default function ProofGenerator() {
     step === 'initializing' ||
     step === 'generating' ||
     step === 'calldata';
+  const nullifier = publicOutputs?.nullifier ?? null;
 
   // ---- Check if credential is expired ----
   const credentialExpired = credential
@@ -387,6 +429,56 @@ export default function ProofGenerator() {
         }
       })()
     : false;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkNullifierReuse(nextNullifier: string) {
+      setNullifierStatus('checking');
+      setNullifierStatusError(null);
+      setExistingVerification(null);
+
+      try {
+        const used = await isNullifierUsed(nextNullifier);
+        if (cancelled) return;
+
+        if (!used) {
+          setNullifierStatus('unused');
+          return;
+        }
+
+        const record = await getVerificationRecord(nextNullifier);
+        if (cancelled) return;
+
+        if (record.exists) {
+          setExistingVerification({
+            timestamp: record.timestamp,
+            circuitId: record.circuitId,
+          });
+        }
+        setNullifierStatus('used');
+      } catch (err) {
+        if (cancelled) return;
+        const message = err instanceof Error ? err.message : String(err);
+        setNullifierStatus('error');
+        setNullifierStatusError(
+          `Could not check on-chain nullifier status (${message}).`,
+        );
+      }
+    }
+
+    if (step === 'previewing' && nullifier) {
+      void checkNullifierReuse(nullifier);
+    } else {
+      setNullifierStatus('idle');
+      setNullifierStatusError(null);
+      setExistingVerification(null);
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [step, nullifier]);
 
   // ---- Handlers ----
 
@@ -479,6 +571,33 @@ export default function ProofGenerator() {
 
   const handleSubmit = useCallback(async () => {
     if (!walletAccount || !calldataResult || !publicOutputs) return;
+    if (nullifierStatus === 'checking' || nullifierStatus === 'used') return;
+
+    const nextNullifier = publicOutputs.nullifier;
+    try {
+      const used = await isNullifierUsed(nextNullifier);
+      if (used) {
+        const record = await getVerificationRecord(nextNullifier);
+        if (record.exists) {
+          setExistingVerification({
+            timestamp: record.timestamp,
+            circuitId: record.circuitId,
+          });
+        }
+        setNullifierStatus('used');
+        setNullifierStatusError(null);
+        return;
+      }
+      setNullifierStatus('unused');
+      setNullifierStatusError(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setNullifierStatus('error');
+      setNullifierStatusError(
+        `Could not pre-check nullifier before submission (${message}).`,
+      );
+      return;
+    }
 
     const result = await submitOnChain(walletAccount, calldataResult);
 
@@ -505,11 +624,40 @@ export default function ProofGenerator() {
         threshold: thresholdValue,
       });
     }
-  }, [walletAccount, calldataResult, publicOutputs, submitOnChain]);
+  }, [
+    walletAccount,
+    calldataResult,
+    publicOutputs,
+    nullifierStatus,
+    submitOnChain,
+  ]);
 
   function handleReset() {
+    if (contextSwitchTimeoutRef.current) {
+      clearTimeout(contextSwitchTimeoutRef.current);
+      contextSwitchTimeoutRef.current = null;
+    }
     reset();
     setElapsed(0);
+    setNullifierStatus('idle');
+    setNullifierStatusError(null);
+    setExistingVerification(null);
+    setContextSwitchMessage(null);
+  }
+
+  function switchToTestContext(nextId: number) {
+    setDappContextId(nextId);
+    setContextSwitchMessage(
+      `Selected test dApp Context ID ${nextId}. Returning to parameter step...`,
+    );
+
+    if (contextSwitchTimeoutRef.current) {
+      clearTimeout(contextSwitchTimeoutRef.current);
+    }
+    contextSwitchTimeoutRef.current = setTimeout(() => {
+      contextSwitchTimeoutRef.current = null;
+      handleReset();
+    }, 700);
   }
 
   // ---- Render ----
@@ -765,13 +913,82 @@ export default function ProofGenerator() {
             </div>
           )}
 
+          {nullifierStatus === 'checking' && (
+            <div className="p-3 border border-[var(--color-border-hard)] bg-[var(--color-surface-raised)]">
+              <p className="text-xs text-[var(--color-text-2)] font-mono">
+                Checking if this nullifier is already verified on-chain...
+              </p>
+            </div>
+          )}
+
+          {nullifierStatus === 'used' && (
+            <div
+              className="p-3 border border-[var(--color-green)] bg-[var(--color-surface-raised)]"
+            >
+              <p className="text-xs font-bold uppercase text-[var(--color-green)]">
+                Already verified
+              </p>
+              <p className="text-[10px] text-[var(--color-text-3)] font-mono mt-1">
+                This nullifier is already registered on-chain for this dApp context.
+                Submission is skipped to avoid an unnecessary wallet popup and revert.
+              </p>
+              <p className="text-[10px] text-[var(--color-text-3)] font-mono mt-1">
+                Demo tip: choose a new test dApp Context ID to generate a different nullifier.
+              </p>
+              {existingVerification && (
+                <p className="text-[10px] text-[var(--color-text-3)] font-mono mt-1">
+                  Recorded at {formatUnixTimestamp(existingVerification.timestamp)} ({existingVerification.timestamp}),
+                  circuit id {existingVerification.circuitId}.
+                </p>
+              )}
+              <div className="mt-3">
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => {
+                      switchToTestContext(nextTestContextId(dappContextId));
+                    }}
+                    className="btn-secondary !text-xs"
+                  >
+                    Use New Test Context (ID {nextTestContextId(dappContextId)})
+                  </button>
+                  <button
+                    onClick={() => {
+                      switchToTestContext(randomTestContextId());
+                    }}
+                    className="btn-secondary !text-xs"
+                  >
+                    Use Random Test Context
+                  </button>
+                </div>
+                {contextSwitchMessage && (
+                  <p className="text-[10px] text-[var(--color-green)] font-mono mt-2">
+                    {contextSwitchMessage}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {nullifierStatus === 'error' && nullifierStatusError && (
+            <div
+              className="p-3 border border-[var(--color-red)] bg-[var(--color-surface-raised)]"
+            >
+              <p className="text-xs text-[var(--color-red)] font-mono">{nullifierStatusError}</p>
+            </div>
+          )}
+
           <div className="flex gap-3">
             {walletAccount ? (
               <button
                 onClick={handleSubmit}
+                disabled={nullifierStatus !== 'unused'}
                 className="btn-success flex-1 flex items-center justify-center gap-2"
               >
-                Submit On-Chain
+                {nullifierStatus === 'checking'
+                  ? 'Checking Status...'
+                  : nullifierStatus === 'used'
+                    ? 'Already Verified'
+                    : 'Submit On-Chain'}
               </button>
             ) : (
               <div

@@ -375,6 +375,24 @@
     //   age_verify: index 5 (8 public inputs total)
     //   membership_proof: index 12 (15 public inputs total)
 
+    async function skipIfAlreadyVerified(nullifier) {
+      log(`Pre-check nullifier before submission: ${nullifier}`);
+      const used = await isNullifierUsed(nullifier);
+      if (!used) {
+        log('Nullifier is unused. Proceeding to wallet submission.', 'log-time');
+        return false;
+      }
+
+      log(
+        'Already verified for this dApp context. Skipping submission to avoid wallet popup/revert.',
+        'log-warn',
+      );
+      nullifierInput.value = nullifier;
+      const record = await getVerificationRecord(nullifier);
+      displayVerificationRecord(record);
+      return true;
+    }
+
     async function submitAgeProofOnChain() {
       if (!walletAccount) {
         log('Connect wallet first', 'log-error');
@@ -397,6 +415,12 @@
           dappContextId: 42,
         });
         log(`Proof generated (${proofResult.proof.length} bytes, ${proofResult.publicInputs.length} inputs)`, 'log-success');
+        const nullifier = proofResult.publicInputs[5]; // age_verify nullifier at index 5
+
+        if (await skipIfAlreadyVerified(nullifier)) {
+          log('=== Age proof already verified ===\n', 'log-warn');
+          return;
+        }
 
         // Step 2: Generate calldata
         log('Generating garaga calldata...');
@@ -410,7 +434,6 @@
         log(`Circuit ID: ${submitResult.circuitId} (age_verify)`, 'log-time');
 
         // Step 4: Query verification status using nullifier
-        const nullifier = proofResult.publicInputs[5]; // age_verify nullifier at index 5
         log(`Querying verification for nullifier: ${nullifier}...`);
         nullifierInput.value = nullifier;
         const record = await getVerificationRecord(nullifier);
@@ -448,6 +471,12 @@
           dappContextId: 42,
         });
         log(`Proof generated (${proofResult.proof.length} bytes, ${proofResult.publicInputs.length} inputs)`, 'log-success');
+        const nullifier = proofResult.publicInputs[12]; // membership_proof nullifier at index 12
+
+        if (await skipIfAlreadyVerified(nullifier)) {
+          log('=== Membership proof already verified ===\n', 'log-warn');
+          return;
+        }
 
         // Step 2: Generate calldata
         log('Generating garaga calldata...');
@@ -461,7 +490,6 @@
         log(`Circuit ID: ${submitResult.circuitId} (membership_proof)`, 'log-time');
 
         // Step 4: Query verification status using nullifier
-        const nullifier = proofResult.publicInputs[12]; // membership_proof nullifier at index 12
         log(`Querying verification for nullifier: ${nullifier}...`);
         nullifierInput.value = nullifier;
         const record = await getVerificationRecord(nullifier);
