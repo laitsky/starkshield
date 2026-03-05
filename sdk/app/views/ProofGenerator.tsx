@@ -875,7 +875,7 @@ export default function ProofGenerator() {
 
           {/* Pre-generation info */}
           <div className="flex items-center gap-4 text-[10px] text-[var(--color-text-3)] font-mono">
-            <span>Estimated time: ~15-30s</span>
+            <span>Estimated time: device-dependent (~6s on M1)</span>
             <span>Runs entirely in your browser via WASM</span>
           </div>
         </div>
@@ -888,7 +888,7 @@ export default function ProofGenerator() {
             <span className="section-label">03 &mdash; Processing</span>
             <div className="flex items-center gap-3">
               <span className="text-[10px] text-[var(--color-text-3)] font-mono">
-                ~15-30s typical
+                device-dependent
               </span>
               <span className="badge badge-checking font-mono">{elapsed}s</span>
             </div>

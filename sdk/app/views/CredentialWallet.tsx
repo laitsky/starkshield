@@ -74,6 +74,8 @@ export default function CredentialWallet() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showSchema, setShowSchema] = useState(false);
+  const [showAdvancedImport, setShowAdvancedImport] = useState(false);
+  const [pasteJson, setPasteJson] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropZoneRef = useRef<HTMLDivElement>(null);
@@ -116,27 +118,37 @@ export default function CredentialWallet() {
     };
   }, []);
 
+  function importCredentialFromJsonText(jsonText: string, sourceLabel: string) {
+    const trimmed = jsonText.replace(/^\uFEFF/, '').trim();
+    if (!trimmed) {
+      setError(`No credential JSON provided (${sourceLabel}).`);
+      return;
+    }
+
+    try {
+      const json: CredentialJSON = JSON.parse(trimmed);
+      const loaded = parseCredential(json, false);
+
+      if (!loaded.validation.valid) {
+        setError(`Invalid credential: ${loaded.validation.errors.join(', ')}`);
+        return;
+      }
+
+      setCredentials((prev) => [...prev, loaded]);
+      setError(null);
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? `Failed to parse JSON (${sourceLabel}): ${err.message}`
+          : `Failed to parse credential JSON (${sourceLabel}). Make sure it matches the expected schema.`,
+      );
+    }
+  }
+
   function processFile(file: File) {
     const reader = new FileReader();
     reader.onload = () => {
-      try {
-        const json: CredentialJSON = JSON.parse(reader.result as string);
-        const loaded = parseCredential(json, false);
-
-        if (!loaded.validation.valid) {
-          setError(`Invalid credential: ${loaded.validation.errors.join(', ')}`);
-          return;
-        }
-
-        setCredentials((prev) => [...prev, loaded]);
-        setError(null);
-      } catch (err) {
-        setError(
-          err instanceof Error
-            ? `Failed to parse JSON: ${err.message}`
-            : 'Failed to parse credential file. Make sure it\'s valid JSON matching the expected schema.',
-        );
-      }
+      importCredentialFromJsonText(String(reader.result ?? ''), 'file upload');
     };
     reader.readAsText(file);
   }
@@ -171,7 +183,7 @@ export default function CredentialWallet() {
     if (file && file.name.endsWith('.json')) {
       processFile(file);
     } else {
-      setError('Please upload a .json file');
+      setError('Please drop a `.json` credential file.');
     }
   }
 
@@ -219,7 +231,7 @@ export default function CredentialWallet() {
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-8">
           <div className="flex items-start gap-2">
             <span className="text-xs font-extrabold text-[var(--color-accent)] mt-0.5">1</span>
-            <p className="text-xs text-[var(--color-text-2)]">Load a credential (try the demos below or upload your own)</p>
+            <p className="text-xs text-[var(--color-text-2)]">Load a credential (try the demos below or paste/import your own)</p>
           </div>
           <div className="flex items-start gap-2">
             <span className="text-xs font-extrabold text-[var(--color-accent)] mt-0.5">2</span>
@@ -263,7 +275,7 @@ export default function CredentialWallet() {
         <div className="brutal-card-static p-12 text-center space-y-5 animate-fade-in">
           <p className="text-sm font-bold uppercase text-[var(--color-text-2)]">No credentials loaded</p>
           <p className="text-xs text-[var(--color-text-3)] font-mono leading-relaxed max-w-sm mx-auto">
-            Upload a credential JSON file using the card below, or reload the demo credentials to try the flow.
+            Paste a credential JSON below, or reload the demo credentials to try the flow.
           </p>
           <button
             onClick={() => window.location.reload()}
@@ -384,55 +396,116 @@ export default function CredentialWallet() {
             </div>
           );
         })}
+      </div>
 
-        {/* Upload Card with drag-and-drop */}
-        <div
-          ref={dropZoneRef}
-          role="button"
-          tabIndex={0}
-          className={`brutal-card group cursor-pointer p-6 flex flex-col items-center justify-center gap-4 min-h-[240px] animate-fade-in-up ${
-            isDragging ? 'card-selected' : ''
-          }`}
-          style={{
-            animationDelay: `${credentials.length * 0.06}s`,
-            borderStyle: 'dashed',
-            borderColor: isDragging ? 'var(--color-accent)' : undefined,
-          }}
-          onClick={() => fileInputRef.current?.click()}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          aria-label="Upload credential JSON file"
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".json"
-            onChange={handleFileLoad}
-            className="hidden"
+      {/* Add Credential */}
+      <div className="brutal-card-static p-6 space-y-5 animate-fade-in-up">
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-1">
+            <span className="section-label">// Add Credential</span>
+            <p className="text-xs text-[var(--color-text-2)]">
+              Import a credential to your local wallet. Nothing is uploaded.
+            </p>
+          </div>
+          <button
+            onClick={() => setShowAdvancedImport((v) => !v)}
+            className="btn-secondary !text-xs shrink-0"
+          >
+            {showAdvancedImport ? 'Hide Advanced' : 'Advanced Import'}
+          </button>
+        </div>
+
+        {/* Paste JSON (primary) */}
+        <div className="space-y-3">
+          <p className="text-xs font-bold uppercase text-[var(--color-text-3)]">
+            Paste credential JSON
+          </p>
+          <textarea
+            value={pasteJson}
+            onChange={(e) => setPasteJson(e.target.value)}
+            placeholder="Paste the full credential JSON here…"
+            className="w-full h-44 p-3 border border-[var(--color-border-hard)] bg-[var(--color-surface-raised)] text-[11px] text-[var(--color-text-2)] font-mono rounded-none focus:outline-none focus:border-[var(--color-accent)]"
           />
-          <div className={`text-3xl font-extrabold transition-colors duration-150 ${
-            isDragging ? 'text-[var(--color-accent)]' : 'text-[var(--color-text-3)] group-hover:text-[var(--color-accent)]'
-          }`}>+</div>
-          <div className="text-center space-y-2">
-            <p className="text-sm font-bold uppercase text-[var(--color-text-2)] group-hover:text-[var(--color-text)]">
-              {isDragging ? 'Drop credential here' : 'Load Your Credential'}
-            </p>
-            <p className="text-xs text-[var(--color-text-3)] font-mono">
-              Drag & drop a .json file or click to browse
-            </p>
+          <div className="flex flex-wrap items-center gap-3">
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowSchema((prev) => !prev);
-              }}
-              className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-cyan)] hover:text-[var(--color-accent)] transition-colors mt-2 inline-block"
+              onClick={() => importCredentialFromJsonText(pasteJson, 'paste')}
+              className="btn-primary !text-xs"
             >
-              {showSchema ? 'Hide format guide' : 'What format should my file be?'}
+              Import Credential
+            </button>
+            <button
+              onClick={() => setPasteJson('')}
+              className="btn-secondary !text-xs"
+              type="button"
+            >
+              Clear
+            </button>
+            <button
+              onClick={() => setShowSchema((prev) => !prev)}
+              className="text-[10px] font-bold uppercase tracking-wider text-[var(--color-cyan)] hover:text-[var(--color-accent)] transition-colors"
+              type="button"
+            >
+              {showSchema ? 'Hide format guide' : 'Format guide'}
             </button>
           </div>
         </div>
+
+        {/* Advanced: file upload */}
+        {showAdvancedImport && (
+          <div className="space-y-4 animate-fade-in">
+            <p className="text-xs font-bold uppercase text-[var(--color-text-3)]">
+              Advanced: upload JSON file
+            </p>
+            <div
+              ref={dropZoneRef}
+              role="button"
+              tabIndex={0}
+              className={`brutal-card group cursor-pointer p-6 flex flex-col items-center justify-center gap-4 ${
+                isDragging ? 'card-selected' : ''
+              }`}
+              style={{
+                borderStyle: 'dashed',
+                borderColor: isDragging ? 'var(--color-accent)' : undefined,
+              }}
+              onClick={() => fileInputRef.current?.click()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              aria-label="Upload credential JSON file"
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json"
+                onChange={handleFileLoad}
+                className="hidden"
+              />
+              <div
+                className={`text-3xl font-extrabold transition-colors duration-150 ${
+                  isDragging
+                    ? 'text-[var(--color-accent)]'
+                    : 'text-[var(--color-text-3)] group-hover:text-[var(--color-accent)]'
+                }`}
+              >
+                +
+              </div>
+              <div className="text-center space-y-2">
+                <p className="text-sm font-bold uppercase text-[var(--color-text-2)] group-hover:text-[var(--color-text)]">
+                  {isDragging ? 'Drop credential here' : 'Upload credential file'}
+                </p>
+                <p className="text-xs text-[var(--color-text-3)] font-mono">
+                  Drag & drop a `.json` file or click to browse
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Schema Guide (expandable) */}
